@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>كناشي Pro - النسخة التفاعلية النهائية</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* --- التصميم الذي أحببته (ممنوع اللمس) --- */
+        :root {
+            --primary: #2d8cf0;
+            --bg-body: #f4f6f9;
+            --white: #ffffff;
+            --text-main: #1e293b;
+            --text-gray: #64748b;
+            --accent-green: #10b981;
+            --border: #e2e8f0;
+            --highlight-bg: #e0f2fe; /* لون تمييز الساعة الحالية */
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0; padding: 0;
+            display: flex; flex-direction: column; min-height: 100vh;
+        }
+
+        /* --- الهيدر الفخم --- */
+        .app-header {
+            background: var(--white);
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            position: sticky; top: 0; z-index: 100;
+        }
+
+        .header-info h1 { margin: 0; font-size: 1.3rem; font-weight: 800; color: var(--primary); }
+        .header-info p { margin: 4px 0 0; font-size: 0.8rem; color: var(--text-gray); }
+
+        /* --- الإحصائيات --- */
+        .stats-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 15px;
+        }
+        .stat-card {
+            background: var(--white);
+            padding: 15px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            border: 1px solid var(--border);
+        }
+        .stat-card small { display: block; color: var(--text-gray); font-size: 0.75rem; margin-bottom: 5px; }
+        .stat-card b { font-size: 1.2rem; color: var(--text-main); }
+
+        /* --- الجدول التفاعلي --- */
+        .table-section {
+            margin: 10px;
+            background: var(--white);
+            border-radius: 25px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+        }
+
+        .scroll-wrapper { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1100px;
+        }
+
+        th, td {
+            border: 1px solid #f1f5f9;
+            padding: 10px;
+            height: 100px;
+            text-align: center;
+            position: relative;
+        }
+
+        thead th {
+            background: #f8fafc;
+            color: var(--text-gray);
+            font-size: 0.8rem;
+            height: 50px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        /* عمود الأيام الجانبي */
+        .day-header {
+            background: #f8fafc;
+            font-weight: 800;
+            color: var(--text-main);
+            width: 100px;
+            position: sticky;
+            right: 0;
+            z-index: 10;
+            border-left: 2px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        /* تأثيرات الوقت الحالي */
+        .active-day-marker {
+            background: var(--primary) !important;
+            color: white !important;
+        }
+
+        .active-hour-marker {
+            background: var(--highlight-bg) !important;
+            box-shadow: inset 0 0 0 3px var(--primary);
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0% { box-shadow: inset 0 0 0 3px var(--primary); }
+            50% { box-shadow: inset 0 0 0 0px var(--primary); }
+            100% { box-shadow: inset 0 0 0 3px var(--primary); }
+        }
+
+        .cell-slot { cursor: pointer; transition: 0.2s; background: #fff; }
+        .cell-slot:hover { background: #f0f7ff; }
+
+        /* كارت المادة داخل الجدول */
+        .item-card {
+            width: 100%; height: 100%;
+            border-radius: 15px;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            color: white; font-weight: bold; font-size: 0.85rem;
+            padding: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            animation: popUp 0.3s ease;
+        }
+
+        @keyframes popUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .item-card span { font-size: 0.7rem; font-weight: normal; margin-top: 4px; opacity: 0.85; }
+
+        /* --- المودال (نافذة التعديل) --- */
+        .overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(5px);
+            z-index: 1000; justify-content: center; align-items: center; padding: 20px;
+        }
+
+        .modal-body {
+            background: var(--white); width: 100%; max-width: 400px;
+            border-radius: 30px; padding: 25px; box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+        }
+
+        .modal-body h2 { margin: 0 0 20px; font-size: 1.25rem; text-align: center; color: var(--text-main); }
+
+        .field-group { margin-bottom: 20px; }
+        .field-group label { display: block; font-size: 0.85rem; color: var(--text-gray); margin-bottom: 8px; }
+        
+        .flex-row { display: flex; gap: 10px; }
+
+        .input-ctrl {
+            flex: 1; padding: 14px; border: 2px solid var(--border);
+            border-radius: 15px; font-size: 1rem; outline: none; background: #f8fafc;
+            color: var(--text-main); transition: 0.3s;
+        }
+        .input-ctrl:focus { border-color: var(--primary); background: #fff; }
+
+        .add-btn-small {
+            width: 50px; background: var(--primary); color: white; border: none;
+            border-radius: 12px; font-size: 1.2rem; cursor: pointer;
+        }
+
+        .palette { display: flex; justify-content: space-between; margin: 15px 0; }
+        .color-circle {
+            width: 35px; height: 35px; border-radius: 50%; cursor: pointer;
+            border: 3px solid transparent; transition: 0.2s;
+        }
+        .color-circle.active { border-color: var(--text-main); transform: scale(1.1); }
+
+        .modal-btns { display: flex; gap: 12px; margin-top: 25px; }
+        .f-btn {
+            flex: 1; padding: 15px; border-radius: 15px; border: none;
+            font-weight: bold; cursor: pointer; font-size: 1rem;
+        }
+        .f-btn-save { background: var(--primary); color: white; }
+        .f-btn-del { background: #fee2e2; color: #ef4444; }
+        .f-btn-close { background: #f1f5f9; color: var(--text-gray); }
+
+        footer { text-align: center; padding: 20px; font-size: 0.75rem; color: var(--text-gray); }
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <div class="header-info">
+            <h1>كناشي Pro <i class="fas fa-check-circle"></i></h1>
+            <p id="topDate">جاري التحديث...</p>
+        </div>
+        <div style="background: #eff6ff; color: var(--primary); padding: 10px 15px; border-radius: 15px;">
+            <i class="fas fa-calendar-alt"></i>
+        </div>
+    </header>
+
+    <div class="stats-container">
+        <div class="stat-card">
+            <small>وضع العمل</small>
+            <b id="workStatus">تحقق...</b>
+        </div>
+        <div class="stat-card">
+            <small>إجمالي الحصص</small>
+            <b id="sessionCounter">0</b>
+        </div>
+    </div>
+
+    <section class="table-section">
+        <div class="scroll-wrapper">
+            <table>
+                <thead>
+                    <tr id="topHourRow">
+                        <th class="day-header">الفترة / اليوم</th>
+                    </tr>
+                </thead>
+                <tbody id="mainGrid"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <div class="overlay" id="editModal">
+        <div class="modal-body">
+            <h2 id="modalHead">تعديل البيانات</h2>
+            
+            <div class="field-group">
+                <label>اسم المادة</label>
+                <div class="flex-row">
+                    <select id="subjectDrop" class="input-ctrl"></select>
+                    <button class="add-btn-small" onclick="addNewOption('subject')">+</button>
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label>الفوج / القسم</label>
+                <div class="flex-row">
+                    <select id="groupDrop" class="input-ctrl"></select>
+                    <button class="add-btn-small" onclick="addNewOption('group')">+</button>
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label>لون البطاقة</label>
+                <div class="palette" id="colorPalette">
+                    <div class="color-circle active" style="background: #2d8cf0;" data-color="#2d8cf0"></div>
+                    <div class="color-circle" style="background: #10b981;" data-color="#10b981"></div>
+                    <div class="color-circle" style="background: #f59e0b;" data-color="#f59e0b"></div>
+                    <div class="color-circle" style="background: #ef4444;" data-color="#ef4444"></div>
+                    <div class="color-circle" style="background: #8b5cf6;" data-color="#8b5cf6"></div>
+                    <div class="color-circle" style="background: #64748b;" data-color="#64748b"></div>
+                </div>
+            </div>
+
+            <div class="modal-btns">
+                <button class="f-btn f-btn-close" onclick="closeEditor()">إغلاق</button>
+                <button class="f-btn f-btn-del" id="deleteBtn" onclick="removeSession()">حذف</button>
+                <button class="f-btn f-btn-save" onclick="saveSession()">حفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>نظام كناشي Pro لإدارة المؤسسات التعليمية 2026</footer>
+
+    <script>
+        const CORE = {
+            days: [
+                { id: "sun", label: "الأحد" }, { id: "mon", label: "الاثنين" },
+                { id: "tue", label: "الثلاثاء" }, { id: "wed", label: "الأربعاء" },
+                { id: "thu", label: "الخميس" }, { id: "sat", label: "السبت" }
+            ],
+            hours: ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"],
+            dataKey: "kanashi_final_db",
+            configKey: "kanashi_options_db",
+            targetCell: null,
+            pickedColor: "#2d8cf0"
+        };
+
+        function start() {
+            createUI();
+            syncConfigs();
+            syncData();
+            runTimeLogic();
+            setInterval(runTimeLogic, 30000); // تحديث التمييز كل 30 ثانية
+            setupColors();
+        }
+
+        function createUI() {
+            const head = document.getElementById("topHourRow");
+            const body = document.getElementById("mainGrid");
+            CORE.hours.forEach(h => head.innerHTML += `<th>${h}</th>`);
+
+            CORE.days.forEach(day => {
+                let row = `<tr><td class="day-header" id="day_${day.id}">${day.label}</td>`;
+                CORE.hours.forEach(hour => {
+                    const id = `${day.id}_${hour.replace(":","")}`;
+                    row += `<td class="cell-slot" id="${id}" onclick="openEditor('${id}', '${day.label}', '${hour}')"></td>`;
+                });
+                row += `</tr>`;
+                body.innerHTML += row;
+            });
+        }
+
+        function runTimeLogic() {
+            // تنظيف التمييز
+            document.querySelectorAll(".active-day-marker").forEach(e => e.classList.remove("active-day-marker"));
+            document.querySelectorAll(".active-hour-marker").forEach(e => e.classList.remove("active-hour-marker"));
+
+            const now = new Date();
+            const dayMap = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+            const todayId = dayMap[now.getDay()];
+            const hour = now.getHours();
+
+            // تمييز اليوم
+            const dayLabel = document.getElementById(`day_${todayId}`);
+            if (dayLabel) dayLabel.classList.add("active-day-marker");
+
+            // تمييز الساعة
+            if (hour >= 8 && hour <= 18) {
+                const hourId = (hour < 10 ? "0" + hour : hour) + "00";
+                const slot = document.getElementById(`${todayId}_${hourId}`);
+                if (slot) slot.classList.add("active-hour-marker");
+                document.getElementById("workStatus").innerText = "دوام مدرسي";
+            } else {
+                document.getElementById("workStatus").innerText = "وقت استراحة";
+            }
+            document.getElementById("topDate").innerText = now.toLocaleDateString("ar-DZ", { weekday: 'long', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function syncConfigs() {
+            const def = { sub: ["رياضيات", "فيزياء", "علوم"], grp: ["1 ثانوي", "2 ثانوي", "3 ثانوي"] };
+            const cfg = JSON.parse(localStorage.getItem(CORE.configKey) || JSON.stringify(def));
+            
+            const fill = (id, list) => {
+                const el = document.getElementById(id);
+                el.innerHTML = list.map(v => `<option value="${v}">${v}</option>`).join("");
+            };
+            fill("subjectDrop", cfg.sub);
+            fill("groupDrop", cfg.grp);
+        }
+
+        function addNewOption(type) {
+            const promptMsg = type === "subject" ? "اسم المادة الجديدة:" : "اسم القسم الجديد:";
+            const val = prompt(promptMsg);
+            if (val) {
+                const cfg = JSON.parse(localStorage.getItem(CORE.configKey) || '{"sub":[], "grp":[]}');
+                if (type === "subject") cfg.sub.push(val); else cfg.grp.push(val);
+                localStorage.setItem(CORE.configKey, JSON.stringify(cfg));
+                syncConfigs();
+                // اختيار القيمة الجديدة تلقائياً
+                document.getElementById(type === "subject" ? "subjectDrop" : "groupDrop").value = val;
+            }
+        }
+
+        function openEditor(id, day, hour) {
+            CORE.targetCell = id;
+            const db = JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
+            const session = db[id];
+
+            document.getElementById("modalHead").innerText = `${day} - ${hour}`;
+            document.getElementById("deleteBtn").style.display = session ? "block" : "none";
+            
+            if (session) {
+                document.getElementById("subjectDrop").value = session.s;
+                document.getElementById("groupDrop").value = session.g;
+                applyColorUI(session.c);
+            }
+            document.getElementById("editModal").style.display = "flex";
+        }
+
+        function closeEditor() { document.getElementById("editModal").style.display = "none"; }
+
+        function saveSession() {
+            const s = document.getElementById("subjectDrop").value;
+            const g = document.getElementById("groupDrop").value;
+            const db = JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
+
+            db[CORE.targetCell] = { s, g, c: CORE.pickedColor };
+            localStorage.setItem(CORE.dataKey, JSON.stringify(db));
+            
+            drawCell(CORE.targetCell, s, g, CORE.pickedColor);
+            closeEditor();
+            updateStats();
+        }
+
+        function removeSession() {
+            if (confirm("حذف هذه الحصة؟")) {
+                const db = JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
+                delete db[CORE.targetCell];
+                localStorage.setItem(CORE.dataKey, JSON.stringify(db));
+                document.getElementById(CORE.targetCell).innerHTML = "";
+                closeEditor();
+                updateStats();
+            }
+        }
+
+        function drawCell(id, s, g, c) {
+            document.getElementById(id).innerHTML = `
+                <div class="item-card" style="background:${c}">
+                    ${s} <span>${g}</span>
+                </div>`;
+        }
+
+        function syncData() {
+            const db = JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
+            Object.keys(db).forEach(id => drawCell(id, db[id].s, db[id].g, db[id].c));
+            updateStats();
+        }
+
+        function updateStats() {
+            const db = JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
+            document.getElementById("sessionCounter").innerText = Object.keys(db).length;
+        }
+
+        function setupColors() {
+            document.querySelectorAll(".color-circle").forEach(dot => {
+                dot.onclick = () => applyColorUI(dot.dataset.color);
+            });
+        }
+
+        function applyColorUI(color) {
+            CORE.pickedColor = color;
+            document.querySelectorAll(".color-circle").forEach(d => {
+                d.classList.toggle("active", d.dataset.color === color);
+            });
+        }
+
+        start();
+    </script>
+</body>
+</html>
