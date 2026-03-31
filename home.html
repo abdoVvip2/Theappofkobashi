@@ -51,10 +51,16 @@
 
         /* الشبكة */
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
-        .grid-item { background: var(--white); padding: 22px; border-radius: 20px; text-align: center; text-decoration: none; color: inherit; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: 0.2s; }
+        .grid-item { position: relative; background: var(--white); padding: 22px; border-radius: 20px; text-align: center; text-decoration: none; color: inherit; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: 0.2s; }
         .grid-item:active { transform: scale(0.95); background: #f8fafc; }
         .grid-item i { font-size: 1.8rem; margin-bottom: 10px; display: block; }
         .grid-item span { font-weight: bold; font-size: 0.9rem; color: #334155; }
+
+        /* وسم جديد */
+        .badge-new {
+            position: absolute; top: 10px; right: 10px; background: var(--red-text); color: white;
+            font-size: 0.6rem; padding: 2px 8px; border-radius: 8px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
 
         .note-card { background: var(--red-bg); color: var(--red-text); border: 1px solid #fecaca; display: flex; align-items: center; padding: 16px; border-radius: 18px; cursor: pointer; }
         .note-card i { font-size: 1.4rem; margin-left: 12px; }
@@ -111,6 +117,11 @@
             <a href="analytics.html" class="grid-item"><i class="fas fa-chart-pie" style="color: #6366f1;"></i><span>المالية</span></a>
             <a href="groups.html" class="grid-item"><i class="fas fa-calendar-alt" style="color: var(--orange);"></i><span>الأفواج</span></a>
             <a href="subs.html" class="grid-item"><i class="fas fa-file-signature" style="color: #a855f7;"></i><span>التسجيلات</span></a>
+            <a href="jd.html" class="grid-item">
+                <span class="badge-new">جديد</span>
+                <i class="fas fa-calendar-check" style="color: var(--green);"></i>
+                <span>جدول عملي</span>
+            </a>
         </div>
 
         <div class="note-card" onclick="editQuickNote()">
@@ -121,7 +132,7 @@
 
     <script>
         const DB_NAME = "kanashi_db";
-        const DB_VERSION = 2; // التأكيد على الإصدار 2
+        const DB_VERSION = 2; 
         let db = null;
 
         function openDB() {
@@ -161,27 +172,22 @@
             const students = await getData("students");
             const groups = await getData("groups");
             
-            // 1. تحديث الخزينة
             let totalPaid = 0;
             students.forEach(s => totalPaid += Number(s.paid || 0));
             document.getElementById("profitLabel").innerHTML = `${totalPaid.toLocaleString()} <span>دج</span>`;
 
-            // 2. تحديث الرسم البياني (ديناميكياً بناءً على التحصيل)
             if(totalPaid > 0) {
                 const currentBar = document.getElementById("currentBar");
-                // جعل الـ Bar الحالي يعكس نسبة الدفع (تجريبياً)
                 let height = Math.min(90, (totalPaid / 50000) * 100); 
                 currentBar.style.height = (height + 10) + "%";
             }
 
-            // 3. الفوج القادم
             const dayMap = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
             const today = dayMap[new Date().getDay()];
             const nextG = groups.find(g => g.days && g.days.includes(today));
             document.getElementById("sessionLabel").innerText = nextG ? `${nextG.name} (${nextG.time})` : "لا دروس مجدولة اليوم";
 
-            // 4. التاريخ والملاحظات
-            document.getElementById("currentDate").innerText = new Date().toLocaleDateString("ar-DZ", { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById("currentDate").innerText = new Date().toLocaleDateString("ar-DZ", { weekday: "long", day: "numeric", month: "long" });
             document.getElementById("noteLabel").innerText = localStorage.getItem("kanashi_quick_note") || "اضغط لإضافة ملاحظة سريعة...";
         }
 
