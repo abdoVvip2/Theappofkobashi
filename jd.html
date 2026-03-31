@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>كناشي Pro - النسخة التفاعلية النهائية</title>
+    <title>كناشي Pro - النسخة الكاملة 24/7</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* --- التصميم الذي أحببته (ممنوع اللمس) --- */
+        /* --- التصميم الأصلي (بدون تغيير) --- */
         :root {
             --primary: #2d8cf0;
             --bg-body: #f4f6f9;
@@ -15,7 +15,7 @@
             --text-gray: #64748b;
             --accent-green: #10b981;
             --border: #e2e8f0;
-            --highlight-bg: #e0f2fe; /* لون تمييز الساعة الحالية */
+            --highlight-bg: #e0f2fe; 
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -28,7 +28,6 @@
             display: flex; flex-direction: column; min-height: 100vh;
         }
 
-        /* --- الهيدر الفخم --- */
         .app-header {
             background: var(--white);
             padding: 20px;
@@ -42,7 +41,6 @@
         .header-info h1 { margin: 0; font-size: 1.3rem; font-weight: 800; color: var(--primary); }
         .header-info p { margin: 4px 0 0; font-size: 0.8rem; color: var(--text-gray); }
 
-        /* --- الإحصائيات --- */
         .stats-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -60,7 +58,6 @@
         .stat-card small { display: block; color: var(--text-gray); font-size: 0.75rem; margin-bottom: 5px; }
         .stat-card b { font-size: 1.2rem; color: var(--text-main); }
 
-        /* --- الجدول التفاعلي --- */
         .table-section {
             margin: 10px;
             background: var(--white);
@@ -75,7 +72,8 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1100px;
+            /* عرض الجدول سيزداد ليتناسب مع 24 ساعة */
+            min-width: 2600px; 
         }
 
         th, td {
@@ -94,7 +92,6 @@
             border-bottom: 2px solid var(--border);
         }
 
-        /* عمود الأيام الجانبي */
         .day-header {
             background: #f8fafc;
             font-weight: 800;
@@ -107,7 +104,6 @@
             font-size: 0.9rem;
         }
 
-        /* تأثيرات الوقت الحالي */
         .active-day-marker {
             background: var(--primary) !important;
             color: white !important;
@@ -128,7 +124,6 @@
         .cell-slot { cursor: pointer; transition: 0.2s; background: #fff; }
         .cell-slot:hover { background: #f0f7ff; }
 
-        /* كارت المادة داخل الجدول */
         .item-card {
             width: 100%; height: 100%;
             border-radius: 15px;
@@ -143,7 +138,6 @@
         @keyframes popUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .item-card span { font-size: 0.7rem; font-weight: normal; margin-top: 4px; opacity: 0.85; }
 
-        /* --- المودال (نافذة التعديل) --- */
         .overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(5px);
@@ -207,7 +201,7 @@
 
     <div class="stats-container">
         <div class="stat-card">
-            <small>وضع العمل</small>
+            <small>الحالة الآن</small>
             <b id="workStatus">تحقق...</b>
         </div>
         <div class="stat-card">
@@ -221,7 +215,7 @@
             <table>
                 <thead>
                     <tr id="topHourRow">
-                        <th class="day-header">الفترة / اليوم</th>
+                        <th class="day-header">الساعة / اليوم</th>
                     </tr>
                 </thead>
                 <tbody id="mainGrid"></tbody>
@@ -232,7 +226,6 @@
     <div class="overlay" id="editModal">
         <div class="modal-body">
             <h2 id="modalHead">تعديل البيانات</h2>
-            
             <div class="field-group">
                 <label>اسم المادة</label>
                 <div class="flex-row">
@@ -240,7 +233,6 @@
                     <button class="add-btn-small" onclick="addNewOption('subject')">+</button>
                 </div>
             </div>
-
             <div class="field-group">
                 <label>الفوج / القسم</label>
                 <div class="flex-row">
@@ -248,7 +240,6 @@
                     <button class="add-btn-small" onclick="addNewOption('group')">+</button>
                 </div>
             </div>
-
             <div class="field-group">
                 <label>لون البطاقة</label>
                 <div class="palette" id="colorPalette">
@@ -260,7 +251,6 @@
                     <div class="color-circle" style="background: #64748b;" data-color="#64748b"></div>
                 </div>
             </div>
-
             <div class="modal-btns">
                 <button class="f-btn f-btn-close" onclick="closeEditor()">إغلاق</button>
                 <button class="f-btn f-btn-del" id="deleteBtn" onclick="removeSession()">حذف</button>
@@ -269,16 +259,21 @@
         </div>
     </div>
 
-    <footer>نظام كناشي Pro لإدارة المؤسسات التعليمية 2026</footer>
+    <footer>نظام كناشي Pro - تغطية شاملة 24/7</footer>
 
     <script>
         const CORE = {
             days: [
-                { id: "sun", label: "الأحد" }, { id: "mon", label: "الاثنين" },
-                { id: "tue", label: "الثلاثاء" }, { id: "wed", label: "الأربعاء" },
-                { id: "thu", label: "الخميس" }, { id: "sat", label: "السبت" }
+                { id: "sun", label: "الأحد" }, 
+                { id: "mon", label: "الاثنين" },
+                { id: "tue", label: "الثلاثاء" }, 
+                { id: "wed", label: "الأربعاء" },
+                { id: "thu", label: "الخميس" }, 
+                { id: "fri", label: "الجمعة" }, // تمت إضافة الجمعة
+                { id: "sat", label: "السبت" }
             ],
-            hours: ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"],
+            // توليد 24 ساعة برمجياً
+            hours: Array.from({length: 24}, (_, i) => (i < 10 ? '0' + i : i) + ":00"),
             dataKey: "kanashi_final_db",
             configKey: "kanashi_options_db",
             targetCell: null,
@@ -290,19 +285,23 @@
             syncConfigs();
             syncData();
             runTimeLogic();
-            setInterval(runTimeLogic, 30000); // تحديث التمييز كل 30 ثانية
+            setInterval(runTimeLogic, 30000);
             setupColors();
         }
 
         function createUI() {
             const head = document.getElementById("topHourRow");
             const body = document.getElementById("mainGrid");
+            
+            // إضافة العناوين (الساعات)
             CORE.hours.forEach(h => head.innerHTML += `<th>${h}</th>`);
 
+            // إضافة الصفوف (الأيام)
             CORE.days.forEach(day => {
                 let row = `<tr><td class="day-header" id="day_${day.id}">${day.label}</td>`;
                 CORE.hours.forEach(hour => {
-                    const id = `${day.id}_${hour.replace(":","")}`;
+                    const cleanHour = hour.replace(":", "");
+                    const id = `${day.id}_${cleanHour}`;
                     row += `<td class="cell-slot" id="${id}" onclick="openEditor('${id}', '${day.label}', '${hour}')"></td>`;
                 });
                 row += `</tr>`;
@@ -311,35 +310,35 @@
         }
 
         function runTimeLogic() {
-            // تنظيف التمييز
             document.querySelectorAll(".active-day-marker").forEach(e => e.classList.remove("active-day-marker"));
             document.querySelectorAll(".active-hour-marker").forEach(e => e.classList.remove("active-hour-marker"));
 
             const now = new Date();
             const dayMap = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
             const todayId = dayMap[now.getDay()];
-            const hour = now.getHours();
+            const currentHour = now.getHours();
 
-            // تمييز اليوم
             const dayLabel = document.getElementById(`day_${todayId}`);
             if (dayLabel) dayLabel.classList.add("active-day-marker");
 
-            // تمييز الساعة
-            if (hour >= 8 && hour <= 18) {
-                const hourId = (hour < 10 ? "0" + hour : hour) + "00";
-                const slot = document.getElementById(`${todayId}_${hourId}`);
-                if (slot) slot.classList.add("active-hour-marker");
-                document.getElementById("workStatus").innerText = "دوام مدرسي";
-            } else {
-                document.getElementById("workStatus").innerText = "وقت استراحة";
+            const hourStr = (currentHour < 10 ? "0" + currentHour : currentHour) + "00";
+            const slot = document.getElementById(`${todayId}_${hourStr}`);
+            
+            if (slot) {
+                slot.classList.add("active-hour-marker");
+                // التمرير التلقائي للساعة الحالية (اختياري لكن مفيد لأن الجدول طويل)
+                // slot.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }
+
+            // تحديث الحالة
+            document.getElementById("workStatus").innerText = "نشط الآن";
             document.getElementById("topDate").innerText = now.toLocaleDateString("ar-DZ", { weekday: 'long', hour: '2-digit', minute: '2-digit' });
         }
 
+        // باقي الدوال (syncConfigs, addNewOption, openEditor, saveSession, etc.) تبقى كما هي تماماً
         function syncConfigs() {
             const def = { sub: ["رياضيات", "فيزياء", "علوم"], grp: ["1 ثانوي", "2 ثانوي", "3 ثانوي"] };
             const cfg = JSON.parse(localStorage.getItem(CORE.configKey) || JSON.stringify(def));
-            
             const fill = (id, list) => {
                 const el = document.getElementById(id);
                 el.innerHTML = list.map(v => `<option value="${v}">${v}</option>`).join("");
@@ -356,7 +355,6 @@
                 if (type === "subject") cfg.sub.push(val); else cfg.grp.push(val);
                 localStorage.setItem(CORE.configKey, JSON.stringify(cfg));
                 syncConfigs();
-                // اختيار القيمة الجديدة تلقائياً
                 document.getElementById(type === "subject" ? "subjectDrop" : "groupDrop").value = val;
             }
         }
@@ -365,10 +363,8 @@
             CORE.targetCell = id;
             const db = JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
             const session = db[id];
-
-            document.getElementById("modalHead").innerText = `${day} - ${hour}`;
+            document.getElementById("modalHead").innerText = `${day} - الساعة ${hour}`;
             document.getElementById("deleteBtn").style.display = session ? "block" : "none";
-            
             if (session) {
                 document.getElementById("subjectDrop").value = session.s;
                 document.getElementById("groupDrop").value = session.g;
@@ -383,10 +379,8 @@
             const s = document.getElementById("subjectDrop").value;
             const g = document.getElementById("groupDrop").value;
             const db = JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
-
             db[CORE.targetCell] = { s, g, c: CORE.pickedColor };
             localStorage.setItem(CORE.dataKey, JSON.stringify(db));
-            
             drawCell(CORE.targetCell, s, g, CORE.pickedColor);
             closeEditor();
             updateStats();
@@ -404,10 +398,10 @@
         }
 
         function drawCell(id, s, g, c) {
-            document.getElementById(id).innerHTML = `
-                <div class="item-card" style="background:${c}">
-                    ${s} <span>${g}</span>
-                </div>`;
+            const cell = document.getElementById(id);
+            if(cell) {
+                cell.innerHTML = `<div class="item-card" style="background:${c}">${s} <span>${g}</span></div>`;
+            }
         }
 
         function syncData() {
@@ -438,3 +432,4 @@
     </script>
 </body>
 </html>
+
