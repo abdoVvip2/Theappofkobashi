@@ -64,7 +64,7 @@
 <div id="renew-modal" class="modal-overlay">
     <div class="modal-content">
         <h3>تجديد الاشتراك</h3>
-        <p style="color:var(--slate);">انتهت الـ 4 حصص، اختر طريقة الدفع:</p>
+        <p style="color:var(--slate);" id="renew-text">انتهت الحصص، اختر طريقة الدفع:</p>
         <button class="btn-act" style="background:var(--green); width:100%; margin-bottom:10px; padding:15px;" onclick="processRenewal(true)">دفع مقدماً (نقداً)</button>
         <button class="btn-act" style="background:var(--red); width:100%; margin-bottom:10px; padding:15px;" onclick="processRenewal(false)">قيد كدين (حصة بحصة)</button>
         <button class="btn-act" style="background:var(--slate); width:100%; padding:15px;" onclick="closeModal()">إلغاء</button>
@@ -137,9 +137,19 @@
         container.innerHTML = groups.map(g => {
             const gSt = students.filter(s => s.group === g.name);
             const isOpen = openGroupId == g.id;
+            const maxSessions = g.sessionsCount || 4; // دعم 4 أو 8 تلقائياً مع حماية القديم
             
             const cards = gSt.map(s => {
-                const att = (s.attendance && s.attendance.length === 4) ? s.attendance : ["","","",""];
+                // موازنة مصفوفة الحضور لتلائم إعدادات الفوج بدون مسح بيانات سابقة
+                let att = s.attendance;
+                if (!att || att.length !== maxSessions) {
+                    let newAtt = Array(maxSessions).fill("");
+                    if (att) {
+                        for(let i=0; i<Math.min(att.length, maxSessions); i++) newAtt[i] = att[i];
+                    }
+                    att = newAtt;
+                }
+
                 const isD = Number(s.debt || 0) > 0;
                 return `
                     <div class="student-card ${isD ? 'has-debt' : ''}">
@@ -163,7 +173,7 @@
             return `
                 <div class="group-section">
                     <div class="group-header" onclick="toggle(${g.id})">
-                        <span>${g.name} (${gSt.length})</span>
+                        <span>${g.name} (${gSt.length}) - ${maxSessions} حصص</span>
                         <i class="fas fa-chevron-down" style="transform: ${isOpen ? 'rotate(180deg)' : 'none'}"></i>
                     </div>
                     <div class="students-list ${isOpen ? 'open' : ''}">${cards}</div>
@@ -176,8 +186,14 @@
         const groups = await getAll(STORE_GROUPS);
         const s = students.find(x => x.id === stId);
         const g = groups.find(x => x.id === gId);
+        const maxSessions = g.sessionsCount || 4;
         
-        if(!s.attendance) s.attendance = ["","","",""];
+        if(!s.attendance || s.attendance.length !== maxSessions) {
+             let newAtt = Array(maxSessions).fill("");
+             if(s.attendance) for(let i=0; i<Math.min(s.attendance.length, maxSessions); i++) newAtt[i] = s.attendance[i];
+             s.attendance = newAtt;
+        }
+
         let idx = s.attendance.indexOf("");
 
         if(idx === -1) {
@@ -189,7 +205,7 @@
 
         s.attendance[idx] = status;
         if(s.paymentMode === "debt") {
-            s.debt = (Number(s.debt)||0) + Math.round(Number(g.price)/4);
+            s.debt = (Number(s.debt)||0) + Math.round(Number(g.price)/maxSessions);
         }
         
         await putItem(STORE_STUDENTS, s);
@@ -200,8 +216,9 @@
         const students = await getAll(STORE_STUDENTS);
         const s = students.find(x => x.id === pendingRenewId);
         const g = pendingGroupObj;
+        const maxSessions = g.sessionsCount || 4;
 
-        s.attendance = ["","","",""];
+        s.attendance = Array(maxSessions).fill("");
         if(isCash) {
             s.paid = (Number(s.paid)||0) + Number(g.price);
             s.paymentMode = "cash";
@@ -220,13 +237,14 @@
         const groups = await getAll(STORE_GROUPS);
         const s = students.find(x => x.id === stId);
         const g = groups.find(x => x.id === gId);
+        const maxSessions = g.sessionsCount || 4;
         
         if(!s.attendance) return;
 
-        for(let i=3; i>=0; i--) {
+        for(let i=s.attendance.length-1; i>=0; i--) {
             if(s.attendance[i] !== "") {
                 if(s.paymentMode === "debt") {
-                    s.debt = Math.max(0, (Number(s.debt)||0) - Math.round(Number(g.price)/4));
+                    s.debt = Math.max(0, (Number(s.debt)||0) - Math.round(Number(g.price)/maxSessions));
                 }
                 s.attendance[i] = ""; 
                 break;
