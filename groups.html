@@ -73,7 +73,14 @@
         <h3 id="modal-title" style="margin-top:0;">إضافة فوج جديد</h3>
         <input type="hidden" id="edit-id">
         <input type="text"   id="g-name"  class="inp" placeholder="اسم الفوج (مثال: السنة 4 متوسط)">
-        <input type="number" id="g-price" class="inp" placeholder="سعر الاشتراك (لـ 4 حصص)">
+        <input type="number" id="g-price" class="inp" placeholder="سعر الاشتراك الإجمالي">
+        
+        <label style="display:block; margin-bottom:5px; font-size:0.9rem; color:var(--slate);">نظام الاشتراك:</label>
+        <select id="g-sessions" class="inp">
+            <option value="4">4 حصص</option>
+            <option value="8">8 حصص</option>
+        </select>
+
         <div style="display:flex; gap:10px;">
             <select id="g-day" class="inp">
                 <option value="">اليوم</option>
@@ -129,7 +136,6 @@
         });
     }
 
-    // Generic DB Helpers
     function getAll(storeName) {
         return new Promise((resolve) => {
             const tx = db.transaction(storeName, "readonly");
@@ -171,10 +177,12 @@
             document.getElementById('g-price').value = g.price;
             document.getElementById('g-day').value   = g.day;
             document.getElementById('g-time').value  = g.time;
+            document.getElementById('g-sessions').value = g.sessionsCount || 4;
         } else {
             document.getElementById('modal-title').innerText = "إضافة فوج جديد";
             ['edit-id','g-name','g-price','g-time'].forEach(id => document.getElementById(id).value = "");
             document.getElementById('g-day').value = "";
+            document.getElementById('g-sessions').value = "4";
         }
     }
 
@@ -183,6 +191,7 @@
         const price = document.getElementById('g-price').value;
         const day   = document.getElementById('g-day').value;
         const time  = document.getElementById('g-time').value;
+        const sessionsCount = Number(document.getElementById('g-sessions').value);
         const editId = document.getElementById('edit-id').value;
 
         if (!name || !price || !day || !time) return alert("الرجاء إكمال جميع البيانات!");
@@ -193,7 +202,6 @@
         if (editId) {
             const oldGroup = groups.find(g => g.id === targetId);
             if (oldGroup.name !== name) {
-                // تحديث اسم الفوج لكل التلاميذ المرتبطين
                 const students = await getAll(STORE_STUDENTS);
                 for (let s of students) {
                     if (s.group === oldGroup.name) {
@@ -206,7 +214,7 @@
             if (groups.some(g => g.name === name)) return alert("اسم الفوج موجود مسبقاً!");
         }
 
-        await putItem(STORE_GROUPS, { id: targetId, name, price, day, time });
+        await putItem(STORE_GROUPS, { id: targetId, name, price, day, time, sessionsCount });
         closeAllModals();
         render();
     }
@@ -309,9 +317,13 @@
         container.innerHTML = groups.length ? groups.map(g => {
             const members = allSt.filter(s => s.group === g.name);
             linkedCount += members.length;
+            const sess = g.sessionsCount || 4;
             return `
             <div class="group-card">
-                <h3 class="group-title">📖 ${g.name}</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 class="group-title">📖 ${g.name}</h3>
+                    <span style="background:var(--blue); color:white; padding:2px 8px; border-radius:10px; font-size:0.8rem;">${sess} حصص</span>
+                </div>
                 <div class="group-info-grid">
                     <div class="info-item">📅 ${g.day}</div>
                     <div class="info-item">🕐 ${g.time}</div>
