@@ -63,10 +63,10 @@
 
 <div id="renew-modal" class="modal-overlay">
     <div class="modal-content">
-        <h3>تجديد الاشتراك</h3>
-        <p style="color:var(--slate);" id="renew-text">انتهت الحصص، اختر طريقة الدفع:</p>
-        <button class="btn-act" style="background:var(--green); width:100%; margin-bottom:10px; padding:15px;" onclick="processRenewal(true)">دفع مقدماً (نقداً)</button>
-        <button class="btn-act" style="background:var(--red); width:100%; margin-bottom:10px; padding:15px;" onclick="processRenewal(false)">قيد كدين (حصة بحصة)</button>
+        <h3>بداية دورة جديدة</h3>
+        <p style="color:var(--slate);" id="renew-text">هذه الحصة الأولى في الدورة، كيف سيتم الدفع؟</p>
+        <button class="btn-act" style="background:var(--green); width:100%; margin-bottom:10px; padding:15px;" onclick="processRenewal(true)">دفع الدورة كاملة (نقداً)</button>
+        <button class="btn-act" style="background:var(--red); width:100%; margin-bottom:10px; padding:15px;" onclick="processRenewal(false)">تسجيل كدين (دفع لاحقاً)</button>
         <button class="btn-act" style="background:var(--slate); width:100%; padding:15px;" onclick="closeModal()">إلغاء</button>
     </div>
 </div>
@@ -78,10 +78,9 @@
     const STORE_GROUPS = "groups";
     
     let db = null;
-    let pendingRenewId = null, pendingGroupObj = null;
+    let pendingRenewId = null, pendingGroupObj = null, pendingStatus = null;
     let openGroupId = null;
 
-    // --- IndexedDB Core ---
     function openDB() {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -106,22 +105,18 @@
         });
     }
 
-    // --- Logic ---
     async function analyzeAdvanced() {
         const students = await getAll(STORE_STUDENTS);
         let cash = 0, totalDebt = 0;
-        
         students.forEach(s => {
             cash += Number(s.paid || 0);
             totalDebt += Number(s.debt || 0);
         });
-
         const projection = cash + totalDebt;
         document.getElementById("stat-cash").innerText = cash.toLocaleString() + " دج";
         document.getElementById("stat-projection").innerText = projection.toLocaleString() + " دج";
         document.getElementById("stat-ratio").innerText = (projection > 0 ? Math.round((cash/projection)*100) : 0) + "%";
         document.getElementById("stat-avg-seat").innerText = (students.length > 0 ? Math.round(cash/students.length) : 0).toLocaleString() + " دج";
-
         const tipBox = document.getElementById("ai-tip-container");
         tipBox.innerHTML = totalDebt > 0 
             ? `<div class="ai-tip"><i class="fas fa-exclamation-circle"></i> ديون عالقة: ${totalDebt.toLocaleString()} دج.</div>`
@@ -137,19 +132,15 @@
         container.innerHTML = groups.map(g => {
             const gSt = students.filter(s => s.group === g.name);
             const isOpen = openGroupId == g.id;
-            const maxSessions = g.sessionsCount || 4; // دعم 4 أو 8 تلقائياً مع حماية القديم
+            const maxSessions = g.sessionsCount || 4;
             
             const cards = gSt.map(s => {
-                // موازنة مصفوفة الحضور لتلائم إعدادات الفوج بدون مسح بيانات سابقة
                 let att = s.attendance;
                 if (!att || att.length !== maxSessions) {
                     let newAtt = Array(maxSessions).fill("");
-                    if (att) {
-                        for(let i=0; i<Math.min(att.length, maxSessions); i++) newAtt[i] = att[i];
-                    }
+                    if (att) for(let i=0; i<Math.min(att.length, maxSessions); i++) newAtt[i] = att[i];
                     att = newAtt;
                 }
-
                 const isD = Number(s.debt || 0) > 0;
                 return `
                     <div class="student-card ${isD ? 'has-debt' : ''}">
@@ -188,18 +179,23 @@
         const g = groups.find(x => x.id === gId);
         const maxSessions = g.sessionsCount || 4;
         
-        if(!s.attendance || s.attendance.length !== maxSessions) {
-             let newAtt = Array(maxSessions).fill("");
-             if(s.attendance) for(let i=0; i<Math.min(s.attendance.length, maxSessions); i++) newAtt[i] = s.attendance[i];
-             s.attendance = newAtt;
+        // التحقق من حالة الدورة: إذا كانت الحصص كلها فارغة، فهذه دورة جديدة
+        const isNewCycle = !s.attendance || s.attendance.every(v => v === "");
+
+        if (isNewCycle) {
+            pendingRenewId = stId; 
+            pendingGroupObj = g;
+            pendingStatus = status; // حفظ الحالة (حاضر/غائب) لتطبيقها بعد اختيار نوع الدفع
+            document.getElementById("renew-modal").style.display = "flex";
+            return;
         }
 
         let idx = s.attendance.indexOf("");
-
         if(idx === -1) {
-            pendingRenewId = stId; 
-            pendingGroupObj = g;
-            document.getElementById("renew-modal").style.display = "flex";
+            // حالة الدورة المنتهية تماماً (الأمان الإضافي)
+            s.attendance = Array(maxSessions).fill("");
+            await putItem(STORE_STUDENTS, s);
+            mark(stId, gId, status);
             return;
         }
 
@@ -219,6 +215,7 @@
         const maxSessions = g.sessionsCount || 4;
 
         s.attendance = Array(maxSessions).fill("");
+        
         if(isCash) {
             s.paid = (Number(s.paid)||0) + Number(g.price);
             s.paymentMode = "cash";
@@ -227,6 +224,12 @@
             s.paymentMode = "debt";
         }
         
+        // تسجيل الحضور الذي ضغط عليه المستخدم لأول مرة
+        s.attendance[0] = pendingStatus;
+        if(!isCash) {
+            s.debt = Math.round(Number(g.price)/maxSessions);
+        }
+
         await putItem(STORE_STUDENTS, s);
         closeModal();
         renderUI();
@@ -240,7 +243,6 @@
         const maxSessions = g.sessionsCount || 4;
         
         if(!s.attendance) return;
-
         for(let i=s.attendance.length-1; i>=0; i--) {
             if(s.attendance[i] !== "") {
                 if(s.paymentMode === "debt") {
@@ -271,7 +273,6 @@
 
     function closeModal() { document.getElementById("renew-modal").style.display = "none"; }
 
-    // Init
     openDB().then(() => renderUI());
 </script>
 </body>
