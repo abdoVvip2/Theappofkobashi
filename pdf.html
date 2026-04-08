@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مستخرج تقارير كناشي Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --dark: #0f172a; --blue: #2563eb; --bg: #f1f5f9; --white: #ffffff; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: var(--dark); }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { background: var(--dark); color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 20px; }
+        
+        .group-card { background: var(--white); padding: 20px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .group-info { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--bg); padding-bottom: 10px; margin-bottom: 15px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; }
+        th { background: #f8fafc; color: #64748b; }
+        
+        .btn-export { 
+            background: var(--blue); color: white; border: none; padding: 12px 25px; 
+            border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 15px;
+            transition: 0.3s;
+        }
+        .btn-export:hover { background: #1d4ed8; opacity: 0.9; }
+        
+        .status-present { color: #22c55e; font-weight: bold; }
+        .status-absent { color: #ef4444; font-weight: bold; }
+        .no-data { text-align: center; padding: 40px; color: #64748b; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1><i class="fas fa-file-invoice"></i> مركز استخراج التقارير</h1>
+        <p>اختر الفوج لتوليد وثيقة PDF رسمية</p>
+    </div>
+
+    <div id="reports-list">
+        <div class="no-data">جاري تحميل البيانات من قاعدة البيانات...</div>
+    </div>
+</div>
+
+<script>
+    const DB_NAME = "kanashi_db";
+    const DB_VERSION = 2;
+
+    // فتح قاعدة البيانات المشتركة مع التطبيق الأصلي
+    function openDB() {
+        return new Promise((resolve) => {
+            const req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onsuccess = (e) => resolve(e.target.result);
+        });
+    }
+
+    async function loadReports() {
+        const db = await openDB();
+        const tx = db.transaction(["students", "groups"], "readonly");
+        const students = await new Promise(r => tx.objectStore("students").getAll().onsuccess = (e) => r(e.target.result));
+        const groups = await new Promise(r => tx.objectStore("groups").getAll().onsuccess = (e) => r(e.target.result));
+
+        const container = document.getElementById("reports-list");
+        container.innerHTML = "";
+
+        if (groups.length === 0) {
+            container.innerHTML = '<div class="no-data">لا توجد أفواج مسجلة حالياً.</div>';
+            return;
+        }
+
+        groups.forEach(g => {
+            const gSt = students.filter(s => s.group === g.name);
+            const groupDiv = document.createElement("div");
+            groupDiv.className = "group-card";
+
+            let tableHTML = `
+                <div class="group-info">
+                    <h3>فوج: ${g.name}</h3>
+                    <span>عدد التلاميذ: ${gSt.length}</span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>التلميذ</th>
+                            ${Array.from({length: g.sessionsCount || 4}, (_, i) => `<th>ح${i+1}</th>`).join('')}
+                            <th>الدين</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${gSt.map(s => `
+                            <tr>
+                                <td>${s.name}</td>
+                                ${Array.from({length: g.sessionsCount || 4}, (_, i) => {
+                                    const status = s.attendance[i] || "-";
+                                    return `<td><span class="status-${status}">${status === 'present' ? 'ح' : status === 'absent' ? 'غ' : '-'}</span></td>`;
+                                }).join('')}
+                                <td>${s.debt || 0} دج</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <button class="btn-export" onclick='sendToExternalSite(${JSON.stringify(g)}, ${JSON.stringify(gSt)})'>
+                    <i class="fas fa-paper-plane"></i> إرسال للمستخرج وطباعة PDF
+                </button>
+            `;
+            groupDiv.innerHTML = tableHTML;
+            container.appendChild(groupDiv);
+        });
+    }
+
+    function sendToExternalSite(group, students) {
+        const reportData = {
+            "التقرير": `سجل الحضور الشهري - فوج ${group.name}`,
+            "التاريخ": new Date().toLocaleDateString('ar-DZ'),
+            "بيانات_الجدول": students.map(s => {
+                let row = { "الاسم": s.name };
+                for (let i = 0; i < (group.sessionsCount || 4); i++) {
+                    let st = s.attendance[i];
+                    row[`حصة ${i+1}`] = st === 'present' ? 'حاضر' : st === 'absent' ? 'غائب' : '-';
+                }
+                row["حالة الدفع"] = (Number(s.debt) > 0) ? `دين: ${s.debt}` : "خالص";
+                return row;
+            })
+        };
+
+        // تشفير البيانات لإرسالها عبر الرابط
+        try {
+            const jsonStr = JSON.stringify(reportData);
+            const bytes = new TextEncoder().encode(jsonStr);
+            let binary = "";
+            bytes.forEach(b => binary += String.fromCharCode(b));
+            const encodedData = btoa(binary);
+
+            const targetUrl = `https://abdovvip2.github.io/Moja/?data=${encodedData}`;
+            window.open(targetUrl, '_blank');
+        } catch (e) {
+            alert("فشل تشفير البيانات. تأكد من حجم البيانات.");
+        }
+    }
+
+    window.onload = loadReports;
+</script>
+
+</body>
+</html>
