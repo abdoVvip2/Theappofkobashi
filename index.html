@@ -3,56 +3,455 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تطبيق كناشي - الدخول</title>
+    <title>تطبيق كناشي</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: "Segoe UI", sans-serif; background: #f0f2f5; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .login-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
-        h1 { color: #1e3a8a; margin-bottom: 10px; }
-        .info-box { background: #e0f2fe; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #bae6fd; }
-        .info-box p { color: #0369a1; margin: 0 0 10px 0; font-weight: bold; }
-        .fb-link { display: inline-block; background: #1877f2; color: white; text-decoration: none; padding: 8px 15px; border-radius: 5px; font-size: 0.9em; width: 80%; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; text-align: center; font-size: 1.1em; }
-        .btn-verify { background: #2563eb; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        .error-msg { color: #dc2626; font-weight: bold; margin-top: 10px; display: none; }
-        
-        /* تأثيرات النجاح */
-        .success-area { display: none; margin-top: 20px; }
-        .success-icon { color: #16a34a; font-size: 3em; margin-bottom: 10px; animation: popIn 0.5s ease-out; }
-        .success-text { color: #15803d; font-weight: bold; font-size: 1.2em; }
-        @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.2); } 100% { transform: scale(1); } }
-        
-        #loading { display: none; color: #64748b; margin-top: 10px; font-weight: bold; }
+        :root {
+            --ink: #0f172a;
+            --paper: #fafaf7;
+            --blue-deep: #1e3a8a;
+            --blue-mid: #2563eb;
+            --blue-light: #dbeafe;
+            --gold: #d97706;
+            --gold-light: #fef3c7;
+            --green: #16a34a;
+            --red: #dc2626;
+            --shadow: 0 20px 60px rgba(15,23,42,0.12);
+            --radius: 16px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: var(--paper);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* خلفية هندسية */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 20% 10%, rgba(37,99,235,0.07) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(30,58,138,0.05) 0%, transparent 50%),
+                radial-gradient(ellipse 40% 30% at 50% 50%, rgba(217,119,6,0.04) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        /* نقاط زخرفية */
+        .dots-grid {
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(37,99,235,0.12) 1px, transparent 1px);
+            background-size: 32px 32px;
+            pointer-events: none;
+            mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 40%, transparent 100%);
+        }
+
+        .card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: var(--shadow), 0 0 0 1px rgba(15,23,42,0.06);
+            width: 92%;
+            max-width: 420px;
+            padding: 40px 36px;
+            position: relative;
+            z-index: 10;
+            animation: slideUp 0.6s cubic-bezier(0.16,1,0.3,1) both;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* شريط علوي */
+        .card-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo-wrap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 68px;
+            height: 68px;
+            background: linear-gradient(135deg, var(--blue-deep), var(--blue-mid));
+            border-radius: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(37,99,235,0.3);
+        }
+
+        .logo-wrap i { color: white; font-size: 28px; }
+
+        .app-title {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--blue-deep);
+            letter-spacing: -0.5px;
+            line-height: 1;
+        }
+
+        .app-subtitle {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-top: 6px;
+            font-weight: 400;
+        }
+
+        /* ---- قسم الكود ---- */
+        .section-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .input-wrap {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .input-wrap i {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px 42px 14px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1rem;
+            color: var(--ink);
+            text-align: center;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            background: #f8fafc;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--blue-mid);
+            box-shadow: 0 0 0 4px rgba(37,99,235,0.1);
+            background: white;
+        }
+
+        input[type="text"]::placeholder { color: #b0bec5; }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:active { transform: scale(0.98); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--blue-mid), var(--blue-deep));
+            color: white;
+            box-shadow: 0 6px 20px rgba(37,99,235,0.35);
+            margin-bottom: 0;
+        }
+
+        .btn-primary:hover { box-shadow: 0 8px 28px rgba(37,99,235,0.45); }
+
+        /* ---- فاصل ---- */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        .divider span {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        /* ---- زر التجربة المجانية ---- */
+        .btn-trial {
+            background: linear-gradient(135deg, #f59e0b, var(--gold));
+            color: white;
+            box-shadow: 0 6px 20px rgba(217,119,6,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-trial::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -60%;
+            width: 40%;
+            height: 200%;
+            background: rgba(255,255,255,0.25);
+            transform: skewX(-20deg);
+            animation: shine 3s infinite 1s;
+        }
+
+        @keyframes shine {
+            0%   { left: -60%; }
+            40%  { left: 120%; }
+            100% { left: 120%; }
+        }
+
+        .btn-trial:hover { box-shadow: 0 8px 28px rgba(217,119,6,0.45); }
+
+        .trial-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--gold-light);
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+        }
+
+        /* ---- تواصل ---- */
+        .contact-box {
+            background: #f0f7ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            text-decoration: none;
+            transition: background 0.2s, transform 0.15s;
+        }
+
+        .contact-box:hover { background: #dbeafe; transform: translateY(-1px); }
+
+        .contact-icon {
+            width: 40px;
+            height: 40px;
+            background: #1877f2;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .contact-icon i { color: white; font-size: 18px; }
+
+        .contact-text { text-align: right; }
+        .contact-text strong { display: block; color: var(--blue-deep); font-size: 0.9rem; font-weight: 700; }
+        .contact-text span { color: #64748b; font-size: 0.78rem; }
+
+        /* ---- رسائل ---- */
+        .msg {
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-top: 12px;
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+        .msg-error { background: #fef2f2; border: 1px solid #fecaca; color: var(--red); }
+        .msg-info  { background: var(--gold-light); border: 1px solid #fcd34d; color: #92400e; }
+
+        #loading {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: 14px;
+            display: none;
+        }
+
+        #loading i { animation: spin 1s linear infinite; margin-left: 6px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ---- نجاح ---- */
+        .success-screen {
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .success-circle {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: 0 12px 30px rgba(22,163,74,0.35);
+            animation: popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both 0.1s;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0); opacity: 0; }
+            to   { transform: scale(1); opacity: 1; }
+        }
+
+        .success-circle i { color: white; font-size: 38px; }
+        .success-title { font-size: 1.4rem; font-weight: 900; color: var(--green); margin-bottom: 6px; }
+        .success-sub   { color: #64748b; font-size: 0.9rem; }
+
+        .progress-bar-wrap {
+            background: #e2e8f0;
+            border-radius: 99px;
+            height: 6px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--blue-mid), var(--blue-deep));
+            border-radius: 99px;
+            width: 0%;
+            animation: fill 2s linear forwards;
+        }
+
+        @keyframes fill { to { width: 100%; } }
+
+        /* ---- تجربة مجانية - نجاح ---- */
+        .trial-success-circle {
+            background: linear-gradient(135deg, #f59e0b, var(--gold));
+            box-shadow: 0 12px 30px rgba(217,119,6,0.35);
+        }
+
+        .trial-success-title { color: var(--gold); }
+
+        .timer-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--gold-light);
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            font-size: 1.5rem;
+            font-weight: 900;
+            padding: 10px 24px;
+            border-radius: 12px;
+            margin-top: 14px;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 2px;
+        }
+
+        .timer-display i { font-size: 1.1rem; }
+
+        /* disabled */
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none !important; }
     </style>
 </head>
 <body>
+<div class="dots-grid"></div>
 
-<div class="login-card">
-    <h1>تطبيق كناشي</h1>
-    
-    <div class="info-box">
-        <p>لست مشتركاً في التطبيق بعد؟</p>
-        <a href="https://www.facebook.com/bouhlam.tenes" target="_blank" class="fb-link">
-            <i class="fab fa-facebook"></i> تواصل مع المطور
+<div class="card">
+
+    <!-- شاشة النجاح (مشتركة) -->
+    <div id="successScreen" class="success-screen">
+        <div id="successCircle" class="success-circle">
+            <i id="successIcon" class="fas fa-check"></i>
+        </div>
+        <div id="successTitle" class="success-title">تم التحقق بنجاح!</div>
+        <div id="successSub" class="success-sub">جاري تحويلك إلى التطبيق...</div>
+        <div class="progress-bar-wrap"><div class="progress-bar"></div></div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div id="mainContent">
+        <div class="card-header">
+            <div class="logo-wrap"><i class="fas fa-book-open"></i></div>
+            <div class="app-title">كناشي</div>
+            <div class="app-subtitle">منصتك للتنظيم والإنتاجية</div>
+        </div>
+
+        <!-- قسم الكود -->
+        <span class="section-label">كود الاشتراك</span>
+        <div class="input-wrap">
+            <i class="fas fa-key"></i>
+            <input type="text" id="keyCode" placeholder="أدخل كود الاشتراك هنا">
+        </div>
+        <button class="btn btn-primary" id="btnLogin" onclick="checkSubscription()">
+            <i class="fas fa-sign-in-alt"></i> دخول
+        </button>
+
+        <div id="errorMsg" class="msg msg-error">
+            <i class="fas fa-times-circle"></i> الكود خاطئ أو منتهي الصلاحية.
+        </div>
+        <div id="loading"><i class="fas fa-spinner"></i> جاري التحقق من السيرفر...</div>
+
+        <!-- فاصل -->
+        <div class="divider"><span>أو</span></div>
+
+        <!-- زر التجربة المجانية -->
+        <div style="text-align:center; margin-bottom: 10px;">
+            <span class="trial-badge"><i class="fas fa-gift"></i> مرة واحدة فقط لكل جهاز</span>
+        </div>
+        <button class="btn btn-trial" id="btnTrial" onclick="startFreeTrial()">
+            <i class="fas fa-clock"></i> ساعة مجانية — جرّب الآن!
+        </button>
+        <div id="trialMsg" class="msg msg-info"></div>
+
+        <!-- تواصل -->
+        <a href="https://www.facebook.com/bouhlam.tenes" target="_blank" class="contact-box">
+            <div class="contact-icon"><i class="fab fa-facebook-f"></i></div>
+            <div class="contact-text">
+                <strong>لست مشتركاً بعد؟</strong>
+                <span>تواصل مع المطور للحصول على كودك</span>
+            </div>
         </a>
-    </div>
-
-    <div id="loginForm">
-        <input type="text" id="keyCode" placeholder="أدخل كود الاشتراك هنا">
-        <button class="btn-verify" onclick="checkSubscription()">دخول</button>
-        <div id="errorMsg" class="error-msg">الكود خاطئ أو منتهي الصلاحية.</div>
-        <div id="loading">جاري التحقق من السيرفر...</div>
-    </div>
-
-    <div id="successArea" class="success-area">
-        <div class="success-icon"><i class="fas fa-check-circle"></i></div>
-        <div class="success-text">شكراً لاشتراكك! جاري تحويلك...</div>
     </div>
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, get, child, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { initializeApp }        from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, get, child, set, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyDGRXACLgFqr7iyyO_S_Ae-XBUWLUpx3Ek",
@@ -65,66 +464,168 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const db  = getDatabase(app);
 
-    // فحص التخزين المحلي فور فتح الصفحة
-    window.onload = async () => {
-        const savedCode = localStorage.getItem("kanashi_code");
-        if (savedCode) {
-            document.getElementById("loginForm").style.display = "none";
-            document.getElementById("loading").style.display = "block";
-            await validateWithServer(savedCode, true);
+    /* ========== بصمة الجهاز ========== */
+    function getDeviceFingerprint() {
+        const raw = [
+            navigator.userAgent,
+            navigator.language,
+            screen.width + 'x' + screen.height,
+            screen.colorDepth,
+            Intl.DateTimeFormat().resolvedOptions().timeZone,
+            navigator.hardwareConcurrency || 0,
+            navigator.platform || ''
+        ].join('|');
+        // hash بسيط
+        let h = 0;
+        for (let i = 0; i < raw.length; i++) {
+            h = Math.imul(31, h) + raw.charCodeAt(i) | 0;
         }
-    };
+        return 'fp_' + Math.abs(h).toString(16).padStart(8,'0');
+    }
 
+    /* ========== التحقق من التجربة ========== */
+    async function checkTrialStatus() {
+        const fp = getDeviceFingerprint();
+        try {
+            const snap = await get(child(ref(db), 'trials/' + fp));
+            if (snap.exists()) {
+                const d = snap.val();
+                if (Date.now() < d.expiresAt) return { used: true, active: true,  expiresAt: d.expiresAt };
+                else                           return { used: true, active: false, expiresAt: d.expiresAt };
+            }
+        } catch(e) {}
+        return { used: false, active: false };
+    }
+
+    /* ========== التحقق من الكود ========== */
+    async function validateWithServer(code, isAutoLogin) {
+        try {
+            const snap = await get(child(ref(db), 'licenses/' + code));
+            if (snap.exists()) {
+                const d = snap.val();
+                if (Date.now() > d.expiresAt) {
+                    await remove(ref(db, 'licenses/' + code));
+                    handleFailure(isAutoLogin, 'license');
+                } else {
+                    handleSuccess('license', code);
+                }
+            } else {
+                handleFailure(isAutoLogin, 'license');
+            }
+        } catch(e) {
+            alert("خطأ في الاتصال بالخادم.");
+            handleFailure(isAutoLogin, 'license');
+        }
+    }
+
+    /* ========== النجاح ========== */
+    function handleSuccess(type, code) {
+        if (type === 'license') {
+            localStorage.setItem("kanashi_code", code);
+        }
+        document.getElementById("mainContent").style.display = "none";
+        const ss = document.getElementById("successScreen");
+        ss.style.display = "block";
+        if (type === 'trial') {
+            document.getElementById("successCircle").classList.add("trial-success-circle");
+            document.getElementById("successTitle").classList.add("trial-success-title");
+            document.getElementById("successTitle").textContent = "تم تفعيل ساعة مجانية! 🎉";
+            document.getElementById("successSub").textContent   = "استمتع بالتطبيق كاملاً لمدة ساعة...";
+        }
+        setTimeout(() => { window.location.href = "home.html"; }, 2000);
+    }
+
+    function handleFailure(isAutoLogin, type) {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("mainContent").style.display = "block";
+        if (!isAutoLogin && type === 'license') {
+            const em = document.getElementById("errorMsg");
+            em.style.display = "block";
+        }
+    }
+
+    /* ========== دخول عادي ========== */
     window.checkSubscription = async () => {
         const inputKey = document.getElementById("keyCode").value.trim();
         if (!inputKey) return;
-        
         document.getElementById("errorMsg").style.display = "none";
+        document.getElementById("loading").style.display  = "block";
+        document.getElementById("btnLogin").disabled      = true;
         await validateWithServer(inputKey, false);
+        document.getElementById("btnLogin").disabled      = false;
+        document.getElementById("loading").style.display  = "none";
     };
 
-    async function validateWithServer(code, isAutoLogin) {
+    /* ========== التجربة المجانية ========== */
+    window.startFreeTrial = async () => {
+        const btn = document.getElementById("btnTrial");
+        const msg = document.getElementById("trialMsg");
+        btn.disabled = true;
+        msg.style.display = "none";
+
+        const fp     = getDeviceFingerprint();
+        const status = await checkTrialStatus();
+
+        if (status.used && status.active) {
+            // لا تزال التجربة سارية – وجّهه مباشرة
+            handleSuccess('trial', null);
+            return;
+        }
+
+        if (status.used && !status.active) {
+            // سبق استخدامها وانتهت
+            msg.innerHTML = '<i class="fas fa-ban"></i> لقد استخدمت تجربتك المجانية من قبل. اشترك للمتابعة!';
+            msg.style.display = "block";
+            btn.disabled      = true; // تعطيل نهائي
+            return;
+        }
+
+        // أول مرة – سجّل في Firebase
         try {
-            const dbRef = ref(db);
-            const path = "licenses/" + code;
-            const snapshot = await get(child(dbRef, path));
-
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                if (Date.now() > data.expiresAt) {
-                    await remove(ref(db, path));
-                    handleFailure(isAutoLogin);
-                } else {
-                    handleSuccess(code);
-                }
-            } else {
-                handleFailure(isAutoLogin);
-            }
-        } catch (error) {
-            alert("خطأ في الاتصال بالخادم.");
-            handleFailure(isAutoLogin);
+            await set(ref(db, 'trials/' + fp), {
+                createdAt : Date.now(),
+                expiresAt : Date.now() + 60 * 60 * 1000 // ساعة واحدة
+            });
+            localStorage.setItem("kanashi_trial_fp", fp);
+            handleSuccess('trial', null);
+        } catch(e) {
+            msg.innerHTML    = '<i class="fas fa-exclamation-triangle"></i> خطأ في الاتصال. حاول مجدداً.';
+            msg.style.display = "block";
+            btn.disabled      = false;
         }
-    }
+    };
 
-    function handleSuccess(code) {
-        localStorage.setItem("kanashi_code", code);
-        document.getElementById("loginForm").style.display = "none";
-        document.getElementById("successArea").style.display = "block";
-        setTimeout(() => {
-            window.location.href = "home.html";
-        }, 2000); // تأخير ثانيتين لرؤية الجمالية
-    }
-
-    function handleFailure(isAutoLogin) {
-        localStorage.removeItem("kanashi_code");
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("loginForm").style.display = "block";
-        if (!isAutoLogin) {
-            document.getElementById("errorMsg").style.display = "block";
+    /* ========== فحص تلقائي عند الفتح ========== */
+    window.onload = async () => {
+        // تحقق من الكود المحفوظ
+        const savedCode = localStorage.getItem("kanashi_code");
+        if (savedCode) {
+            document.getElementById("mainContent").style.display = "none";
+            document.getElementById("loading").style.display     = "block";
+            document.getElementById("loading").style.marginTop   = "20px";
+            await validateWithServer(savedCode, true);
+            return;
         }
-    }
+
+        // تحقق من تجربة مجانية نشطة
+        const status = await checkTrialStatus();
+        if (status.used && status.active) {
+            handleSuccess('trial', null);
+            return;
+        }
+
+        // إذا انتهت التجربة – عطّل الزر وأظهر رسالة
+        if (status.used && !status.active) {
+            const btn = document.getElementById("btnTrial");
+            const msg = document.getElementById("trialMsg");
+            btn.disabled      = true;
+            btn.innerHTML     = '<i class="fas fa-ban"></i> انتهت تجربتك المجانية';
+            msg.innerHTML     = '<i class="fas fa-info-circle"></i> لقد استخدمت ساعتك المجانية. اشترك للمتابعة!';
+            msg.style.display = "block";
+        }
+    };
 </script>
 </body>
 </html>
