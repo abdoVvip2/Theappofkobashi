@@ -4,94 +4,357 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إدارة الأفواج - كناشي Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #f8fafc; --white: #ffffff; --blue: #2563eb;
             --red: #ef4444; --green: #22c55e; --orange: #f59e0b;
             --slate: #64748b; --dark: #0f172a; --radius: 18px;
         }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--dark); line-height: 1.5; }
-        .app-wrapper { max-width: 500px; margin: 0 auto; padding-bottom: 100px; }
-        
-        .dash-header { background: var(--white); padding: 20px; border-radius: var(--radius); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 20px; border-top: 4px solid var(--blue); }
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .stat-card { background: #f1f5f9; padding: 10px; border-radius: 12px; text-align: center; }
-        .stat-card small { display: block; color: var(--slate); font-size: 0.85rem; margin-bottom: 5px; }
-        .stat-card b { color: var(--blue); font-size: 1.4rem; }
 
-        .group-card { background: var(--white); padding: 20px; border-radius: var(--radius); margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
-        .group-title { font-size: 1.2rem; font-weight: bold; margin: 0 0 10px 0; color: var(--dark); }
-        .group-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem; color: var(--slate); margin-bottom: 15px; }
-        .info-item { display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 8px; border-radius: 8px; }
+        * { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; }
 
-        .action-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; border-top: 1px solid #f1f5f9; padding-top: 15px; }
-        .btn-icon { border: none; padding: 12px; border-radius: 12px; cursor: pointer; transition: 0.2s; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
-        .btn-icon:active { transform: scale(0.9); }
+        body {
+            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            margin: 0; padding: 15px;
+            color: var(--dark); line-height: 1.5;
+        }
+
+        /* ── أرقام لاتينية دائماً ── */
+        .num, b, span, input, select, .stat-card b, .badge, .info-item,
+        .schedule-tag, [data-num] {
+            font-variant-numeric: lining-nums;
+            unicode-bidi: embed;
+        }
+
+        .app-wrapper { max-width: 520px; margin: 0 auto; padding-bottom: 110px; }
+
+        /* ── Header ── */
+        .page-header {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 20px;
+            padding: 18px 20px;
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: 0 2px 8px rgba(37,99,235,0.08);
+            border-right: 5px solid var(--blue);
+        }
+        .page-header h2 { margin: 0; font-size: 1.25rem; font-weight: 900; letter-spacing: -0.02em; }
+
+        /* ── Stats ── */
+        .dash-header {
+            background: var(--white);
+            padding: 18px 20px;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+            border-top: 4px solid var(--blue);
+        }
+        .dash-header h4 { margin: 0 0 12px 0; color: var(--slate); font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-card {
+            background: linear-gradient(135deg, #f1f5f9, #e8f0fe);
+            padding: 14px 10px; border-radius: 14px; text-align: center;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.15s;
+        }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-card small { display: block; color: var(--slate); font-size: 0.8rem; margin-bottom: 6px; font-weight: 600; }
+        .stat-card b {
+            color: var(--blue); font-size: 1.6rem; font-weight: 900;
+            font-variant-numeric: lining-nums;
+            direction: ltr; display: block;
+        }
+
+        /* ── Group Cards ── */
+        .group-card {
+            background: var(--white);
+            padding: 20px;
+            border-radius: var(--radius);
+            margin-bottom: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            border: 1px solid #e8edf5;
+            transition: box-shadow 0.2s, transform 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .group-card::before {
+            content: '';
+            position: absolute;
+            top: 0; right: 0;
+            width: 4px; height: 100%;
+            background: var(--blue);
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+        .group-card:hover { box-shadow: 0 6px 20px rgba(37,99,235,0.12); transform: translateY(-1px); }
+
+        .group-title { font-size: 1.15rem; font-weight: 800; margin: 0 0 10px 0; color: var(--dark); }
+
+        .sessions-badge {
+            background: var(--blue); color: white;
+            padding: 3px 10px; border-radius: 20px;
+            font-size: 0.78rem; font-weight: 700;
+            font-variant-numeric: lining-nums; white-space: nowrap;
+        }
+
+        .group-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.9rem; color: var(--slate); margin-bottom: 14px; }
+        .info-item {
+            display: flex; align-items: center; gap: 8px;
+            background: #f8fafc; padding: 9px 12px; border-radius: 10px;
+            font-weight: 600; font-variant-numeric: lining-nums;
+            border: 1px solid #eef2f7;
+        }
+
+        .action-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; border-top: 1px solid #f1f5f9; padding-top: 14px; }
+        .btn-icon {
+            border: none; padding: 12px; border-radius: 12px;
+            cursor: pointer; transition: 0.18s;
+            font-size: 1.15rem; display: flex; align-items: center; justify-content: center;
+        }
+        .btn-icon:hover { filter: brightness(0.93); }
+        .btn-icon:active { transform: scale(0.88); }
         .btn-view { background: #ecfdf5; color: var(--green); }
         .btn-link { background: #eff6ff; color: var(--blue); }
         .btn-edit { background: #fff7ed; color: var(--orange); }
         .btn-del  { background: #fef2f2; color: var(--red); }
 
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.8); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: var(--white); padding: 25px; border-radius: 24px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
-        .inp { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; font-size: 1rem; outline: none; font-family: inherit; }
-        .inp:focus { border-color: var(--blue); }
-        .btn-main { width: 100%; padding: 14px; border: none; border-radius: 12px; background: var(--blue); color: white; font-weight: bold; cursor: pointer; font-size: 1.1rem; margin-top: 10px; font-family: inherit; }
+        /* ── Modals ── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(15,23,42,0.75);
+            backdrop-filter: blur(6px);
+            z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: var(--white);
+            padding: 26px; border-radius: 24px;
+            width: 92%; max-width: 420px;
+            max-height: 88vh; overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            animation: modalIn 0.22s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal-content h3 { margin-top: 0; font-weight: 800; font-size: 1.15rem; }
 
-        .student-row { display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid #f1f5f9; }
+        .inp {
+            width: 100%; padding: 12px 14px;
+            margin-bottom: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px; box-sizing: border-box;
+            font-size: 0.97rem; outline: none;
+            font-family: 'Cairo', inherit;
+            transition: border-color 0.15s;
+            font-variant-numeric: lining-nums;
+        }
+        .inp:focus { border-color: var(--blue); }
+
+        .btn-main {
+            width: 100%; padding: 14px;
+            border: none; border-radius: 12px;
+            background: var(--blue); color: white;
+            font-weight: 800; cursor: pointer;
+            font-size: 1.05rem; margin-top: 8px;
+            font-family: 'Cairo', inherit;
+            transition: background 0.15s, transform 0.1s;
+            letter-spacing: 0.01em;
+        }
+        .btn-main:hover { background: #1d4ed8; }
+        .btn-main:active { transform: scale(0.98); }
+
+        .btn-cancel {
+            width: 100%; background: none; border: none;
+            margin-top: 10px; color: var(--slate);
+            cursor: pointer; font-family: 'Cairo', inherit;
+            font-size: 0.97em; padding: 8px;
+            border-radius: 10px; transition: background 0.15s;
+        }
+        .btn-cancel:hover { background: #f1f5f9; }
+
+        /* ── Student rows ── */
+        .student-row {
+            display: flex; align-items: center;
+            justify-content: space-between;
+            padding: 11px 8px;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.1s;
+        }
         .student-row:last-child { border: none; }
-        .badge { font-size: 0.8rem; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; font-family: inherit; }
+        .student-row:hover { background: #fafbff; }
+
+        .badge {
+            font-size: 0.8rem; padding: 6px 12px;
+            border-radius: 8px; font-weight: 700;
+            cursor: pointer; border: none;
+            font-family: 'Cairo', inherit;
+            transition: opacity 0.15s;
+        }
+        .badge:active { opacity: 0.7; }
         .bg-blue { background: #dbeafe; color: var(--blue); }
         .bg-red  { background: #fee2e2; color: var(--red); }
 
-        .fab { position: fixed; bottom: 20px; left: 20px; width: 60px; height: 60px; background: var(--blue); color: white; border-radius: 20px; border: none; font-size: 28px; box-shadow: 0 10px 15px rgba(37,99,235,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .fab:active { transform: scale(0.9); }
+        /* ── FAB ── */
+        .fab {
+            position: fixed; bottom: 24px; left: 24px;
+            width: 58px; height: 58px;
+            background: var(--blue); color: white;
+            border-radius: 18px; border: none;
+            font-size: 28px;
+            box-shadow: 0 8px 24px rgba(37,99,235,0.45);
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .fab:hover { transform: scale(1.07); box-shadow: 0 12px 28px rgba(37,99,235,0.5); }
+        .fab:active { transform: scale(0.92); }
 
-        /* ── أنماط الجدول الزمني ── */
-        .schedule-section { margin-bottom: 10px; }
-        .schedule-section label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: var(--slate); font-weight: bold; }
-        .schedule-rows { display: flex; flex-direction: column; gap: 8px; }
-        .schedule-row { display: flex; gap: 8px; align-items: center; }
+        /* ── Schedule ── */
+        .schedule-section { margin-bottom: 12px; }
+        .schedule-section label { display: block; margin-bottom: 7px; font-size: 0.88rem; color: var(--slate); font-weight: 700; }
+
+        .schedule-rows { display: flex; flex-direction: column; gap: 10px; }
+
+        .schedule-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 7px; align-items: center;
+        }
+        .schedule-row.no-endtime {
+            grid-template-columns: 1.2fr 1fr auto;
+        }
+
         .schedule-row select,
-        .schedule-row input[type="time"] { flex: 1; padding: 10px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; outline: none; font-family: inherit; box-sizing: border-box; }
+        .schedule-row input[type="time"] {
+            padding: 10px 8px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 0.9rem; outline: none;
+            font-family: 'Cairo', inherit;
+            box-sizing: border-box;
+            transition: border-color 0.15s;
+            font-variant-numeric: lining-nums;
+        }
         .schedule-row select:focus,
         .schedule-row input[type="time"]:focus { border-color: var(--blue); }
-        .btn-remove-row { background: #fef2f2; color: var(--red); border: none; border-radius: 8px; width: 34px; height: 34px; font-size: 1.1rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-        .btn-add-row { background: #eff6ff; color: var(--blue); border: none; border-radius: 10px; padding: 9px 14px; font-size: 0.9rem; cursor: pointer; font-family: inherit; font-weight: bold; margin-top: 4px; width: 100%; }
 
-        .schedule-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-        .schedule-tag { background: #eff6ff; color: var(--blue); padding: 4px 10px; border-radius: 8px; font-size: 0.82rem; }
+        .schedule-row input[type="time"].end-time {
+            border-color: #d1fae5;
+            background: #f0fdf4;
+        }
+        .schedule-row input[type="time"].end-time:focus { border-color: var(--green); }
+
+        .btn-remove-row {
+            background: #fef2f2; color: var(--red);
+            border: none; border-radius: 8px;
+            width: 34px; height: 34px;
+            font-size: 1rem; cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s;
+        }
+        .btn-remove-row:hover { background: #fee2e2; }
+
+        .btn-add-row {
+            background: #eff6ff; color: var(--blue);
+            border: none; border-radius: 10px;
+            padding: 9px 14px; font-size: 0.88rem;
+            cursor: pointer; font-family: 'Cairo', inherit;
+            font-weight: 700; margin-top: 4px; width: 100%;
+            transition: background 0.15s;
+        }
+        .btn-add-row:hover { background: #dbeafe; }
+
+        .schedule-time-header {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1fr auto;
+            gap: 7px;
+            padding: 0 0 2px 0;
+        }
+        .schedule-time-header span {
+            font-size: 0.75rem; color: var(--slate);
+            font-weight: 700; text-align: center;
+            padding: 0 2px;
+        }
+        .schedule-time-header span:last-child { width: 34px; }
+
+        .show-endtime-toggle {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 8px; cursor: pointer;
+            user-select: none;
+        }
+        .show-endtime-toggle input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--green); }
+        .show-endtime-toggle span { font-size: 0.85rem; color: var(--slate); font-weight: 600; }
+
+        /* ── Schedule tags in cards ── */
+        .schedule-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+        .schedule-tag {
+            background: #eff6ff; color: var(--blue);
+            padding: 5px 11px; border-radius: 8px;
+            font-size: 0.8rem; font-weight: 700;
+            font-variant-numeric: lining-nums;
+            border: 1px solid #dbeafe;
+        }
+        .schedule-tag .end-sep { color: var(--slate); margin: 0 3px; font-weight: 400; }
+        .schedule-tag .end-t { color: var(--green); }
+
+        /* ── Empty state ── */
+        .empty-state {
+            text-align: center; padding: 50px 20px;
+            color: var(--slate);
+        }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+        .empty-state p { font-size: 1rem; font-weight: 600; margin: 0; }
+
+        /* ── Divider label ── */
+        .section-label {
+            font-size: 0.78rem; font-weight: 700;
+            color: var(--slate); text-transform: uppercase;
+            letter-spacing: 0.06em; margin-bottom: 10px;
+            margin-top: 5px; display: block;
+        }
     </style>
 </head>
 <body>
 
 <div class="app-wrapper">
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:15px;">
-        <h2 style="margin:0;">📚 إدارة الأفواج والربط</h2>
+
+    <div class="page-header">
+        <span style="font-size:1.5rem;">📚</span>
+        <h2>إدارة الأفواج والربط</h2>
     </div>
 
     <div class="dash-header">
-        <h4 style="margin:0; color:var(--slate);">📊 إحصائيات النظام</h4>
+        <h4>📊 إحصائيات النظام</h4>
         <div class="stat-grid">
-            <div class="stat-card"><small>إجمالي الأفواج</small><b id="total-groups-count">0</b></div>
-            <div class="stat-card"><small>تلاميذ مرتبطين</small><b id="total-linked-students">0</b></div>
+            <div class="stat-card">
+                <small>إجمالي الأفواج</small>
+                <b id="total-groups-count">0</b>
+            </div>
+            <div class="stat-card">
+                <small>تلاميذ مرتبطين</small>
+                <b id="total-linked-students">0</b>
+            </div>
         </div>
     </div>
 
     <div id="groups-list"></div>
 </div>
 
-<button class="fab" onclick="openGroupModal()">+</button>
+<button class="fab" onclick="openGroupModal()" title="إضافة فوج جديد">+</button>
 
 <!-- ── مودال إضافة / تعديل فوج ── -->
 <div id="group-modal" class="modal-overlay" onclick="closeAllModals()">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3 id="modal-title" style="margin-top:0;">إضافة فوج جديد</h3>
+        <h3 id="modal-title">إضافة فوج جديد</h3>
         <input type="hidden" id="edit-id">
+
+        <span class="section-label">معلومات الفوج</span>
         <input type="text"   id="g-name"  class="inp" placeholder="اسم الفوج (مثال: السنة 4 متوسط)">
-        <input type="number" id="g-price" class="inp" placeholder="سعر الاشتراك الإجمالي">
-        
-        <label style="display:block; margin-bottom:5px; font-size:0.9rem; color:var(--slate);">نظام الاشتراك:</label>
+        <input type="number" id="g-price" class="inp" placeholder="سعر الاشتراك الإجمالي (دج)">
+
+        <label style="display:block; margin-bottom:5px; font-size:0.88rem; color:var(--slate); font-weight:700;">نظام الاشتراك:</label>
         <select id="g-sessions" class="inp">
             <option value="4">4 حصص</option>
             <option value="8">8 حصص</option>
@@ -100,80 +363,97 @@
         <!-- جدول الأيام والأوقات -->
         <div class="schedule-section">
             <label>📅 الأيام والأوقات:</label>
+
+            <label class="show-endtime-toggle">
+                <input type="checkbox" id="toggle-endtime" onchange="toggleEndTimeColumns()">
+                <span>إضافة وقت انتهاء الحصة (اختياري)</span>
+            </label>
+
+            <div class="schedule-time-header" id="time-header">
+                <span>اليوم</span>
+                <span>بداية</span>
+                <span id="endtime-header-col" style="display:none;">نهاية</span>
+                <span></span>
+            </div>
+
             <div class="schedule-rows" id="schedule-rows"></div>
             <button class="btn-add-row" onclick="addScheduleRow()">+ إضافة يوم آخر</button>
         </div>
 
-        <button class="btn-main" onclick="saveGroup()">حفظ الفوج</button>
-        <button onclick="closeAllModals()" style="width:100%;background:none;border:none;margin-top:12px;color:var(--slate);cursor:pointer;font-family:inherit;font-size:1em;">إلغاء</button>
+        <button class="btn-main" onclick="saveGroup()">💾 حفظ الفوج</button>
+        <button class="btn-cancel" onclick="closeAllModals()">إلغاء</button>
     </div>
 </div>
 
 <!-- ── مودال ربط التلاميذ ── -->
 <div id="link-student-modal" class="modal-overlay" onclick="closeAllModals()">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3 style="margin-top:0;">➕ إضافة تلميذ للفوج</h3>
+        <h3>➕ إضافة تلميذ للفوج</h3>
         <input type="hidden" id="target-group-name">
-        <input type="text" id="search-student" class="inp" placeholder="🔍 ابحث عن اسم..." onkeyup="renderAvailableStudents()">
-        <div id="available-students" style="margin-top:15px; max-height:300px; overflow-y:auto;"></div>
+        <input type="text" id="search-student" class="inp" placeholder="🔍 ابحث عن اسم..." oninput="renderAvailableStudents()">
+        <div id="available-students" style="margin-top:12px; max-height:300px; overflow-y:auto;"></div>
+        <button class="btn-cancel" onclick="closeAllModals()">إغلاق</button>
     </div>
 </div>
 
 <!-- ── مودال عرض الأعضاء ── -->
 <div id="view-members-modal" class="modal-overlay" onclick="closeAllModals()">
     <div class="modal-content" onclick="event.stopPropagation()">
-        <h3 id="view-group-title" style="margin-top:0;">قائمة التلاميذ</h3>
+        <h3 id="view-group-title">قائمة التلاميذ</h3>
         <div id="members-area" style="max-height:400px; overflow-y:auto;"></div>
+        <button class="btn-cancel" onclick="closeAllModals()">إغلاق</button>
     </div>
 </div>
 
 <script>
-    // ===================== IndexedDB Config =====================
-    const DB_NAME = "kanashi_db";
-    const DB_VERSION = 2;
-    const STORE_STUDENTS = "students";
-    const STORE_GROUPS = "groups";
+    // ── قسر الأرقام لاتينية في كل مكان ──
+    function latinNums(val) {
+        return String(val).replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+    }
 
+    // تطبيق على DOM بعد كل render
+    function forceLatinNumbers() {
+        document.querySelectorAll('.stat-card b, .info-item, .sessions-badge, .schedule-tag, .badge').forEach(el => {
+            el.textContent = latinNums(el.textContent);
+        });
+    }
+
+    // ===================== IndexedDB =====================
+    const DB_NAME = "kanashi_db", DB_VERSION = 2;
+    const STORE_STUDENTS = "students", STORE_GROUPS = "groups";
     let db = null;
 
     function openDB() {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(DB_NAME, DB_VERSION);
             req.onupgradeneeded = (e) => {
-                const database = e.target.result;
-                if (!database.objectStoreNames.contains(STORE_STUDENTS)) {
-                    database.createObjectStore(STORE_STUDENTS, { keyPath: "id" });
-                }
-                if (!database.objectStoreNames.contains(STORE_GROUPS)) {
-                    database.createObjectStore(STORE_GROUPS, { keyPath: "id" });
-                }
+                const d = e.target.result;
+                if (!d.objectStoreNames.contains(STORE_STUDENTS))
+                    d.createObjectStore(STORE_STUDENTS, { keyPath: "id" });
+                if (!d.objectStoreNames.contains(STORE_GROUPS))
+                    d.createObjectStore(STORE_GROUPS, { keyPath: "id" });
             };
             req.onsuccess = (e) => { db = e.target.result; resolve(db); };
             req.onerror = (e) => reject(e.target.error);
         });
     }
-
-    function getAll(storeName) {
-        return new Promise((resolve) => {
-            const tx = db.transaction(storeName, "readonly");
-            const req = tx.objectStore(storeName).getAll();
-            req.onsuccess = () => resolve(req.result);
+    function getAll(s) {
+        return new Promise(res => {
+            const tx = db.transaction(s, "readonly");
+            const req = tx.objectStore(s).getAll();
+            req.onsuccess = () => res(req.result);
         });
     }
-
-    function putItem(storeName, item) {
-        return new Promise((resolve) => {
-            const tx = db.transaction(storeName, "readwrite");
-            const req = tx.objectStore(storeName).put(item);
-            req.onsuccess = () => resolve();
+    function putItem(s, item) {
+        return new Promise(res => {
+            const tx = db.transaction(s, "readwrite");
+            tx.objectStore(s).put(item).onsuccess = () => res();
         });
     }
-
-    function deleteItem(storeName, id) {
-        return new Promise((resolve) => {
-            const tx = db.transaction(storeName, "readwrite");
-            const req = tx.objectStore(storeName).delete(id);
-            req.onsuccess = () => resolve();
+    function deleteItem(s, id) {
+        return new Promise(res => {
+            const tx = db.transaction(s, "readwrite");
+            tx.objectStore(s).delete(id).onsuccess = () => res();
         });
     }
 
@@ -181,8 +461,29 @@
         document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
     }
 
-    // ===================== جدول الأيام والأوقات =====================
+    // ===================== وقت النهاية (toggle) =====================
+    let showEndTime = false;
 
+    function toggleEndTimeColumns() {
+        showEndTime = document.getElementById('toggle-endtime').checked;
+        const header = document.getElementById('endtime-header-col');
+        header.style.display = showEndTime ? '' : 'none';
+
+        document.querySelectorAll('#schedule-rows .schedule-row').forEach(row => {
+            const endInput = row.querySelector('.end-time');
+            if (endInput) endInput.style.display = showEndTime ? '' : 'none';
+            row.classList.toggle('no-endtime', !showEndTime);
+        });
+
+        // تحديث grid-template-columns
+        document.querySelectorAll('#schedule-rows .schedule-row').forEach(row => {
+            row.style.gridTemplateColumns = showEndTime
+                ? '1.2fr 1fr 1fr auto'
+                : '1.2fr 1fr auto';
+        });
+    }
+
+    // ===================== جدول الأيام والأوقات =====================
     const DAYS = ["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
 
     function buildDayOptions(selected) {
@@ -190,15 +491,16 @@
             DAYS.map(d => `<option ${d === selected ? 'selected' : ''}>${d}</option>`).join('');
     }
 
-    function addScheduleRow(day = "", time = "") {
+    function addScheduleRow(day = "", time = "", endTime = "") {
         const container = document.getElementById('schedule-rows');
-        const idx = Date.now() + Math.random();
         const div = document.createElement('div');
-        div.className = 'schedule-row';
-        div.dataset.rowId = idx;
+        div.className = 'schedule-row' + (showEndTime ? '' : ' no-endtime');
+        div.style.gridTemplateColumns = showEndTime ? '1.2fr 1fr 1fr auto' : '1.2fr 1fr auto';
+
         div.innerHTML = `
-            <select onchange="">${buildDayOptions(day)}</select>
-            <input type="time" value="${time}">
+            <select>${buildDayOptions(day)}</select>
+            <input type="time" value="${time}" placeholder="البداية">
+            <input type="time" class="end-time" value="${endTime}" placeholder="النهاية" style="display:${showEndTime ? '' : 'none'}">
             <button class="btn-remove-row" onclick="removeScheduleRow(this)" title="حذف">✕</button>
         `;
         container.appendChild(div);
@@ -215,9 +517,11 @@
         const rows = document.querySelectorAll('#schedule-rows .schedule-row');
         const schedule = [];
         rows.forEach(row => {
-            const day  = row.querySelector('select').value;
-            const time = row.querySelector('input[type="time"]').value;
-            if (day && time) schedule.push({ day, time });
+            const day     = row.querySelector('select').value;
+            const time    = row.querySelector('input[type="time"]:not(.end-time)').value;
+            const endEl   = row.querySelector('.end-time');
+            const endTime = endEl ? endEl.value : "";
+            if (day && time) schedule.push({ day, time, endTime });
         });
         return schedule;
     }
@@ -227,28 +531,38 @@
         if (!schedule || schedule.length === 0) {
             addScheduleRow();
         } else {
-            schedule.forEach(s => addScheduleRow(s.day, s.time));
+            schedule.forEach(s => addScheduleRow(s.day, s.time, s.endTime || ""));
         }
     }
 
     // ===================== إدارة الأفواج =====================
-
     async function openGroupModal(id = null) {
+        showEndTime = false;
+        document.getElementById('toggle-endtime').checked = false;
+        document.getElementById('endtime-header-col').style.display = 'none';
         document.getElementById('group-modal').style.display = 'flex';
+
         if (id) {
             const groups = await getAll(STORE_GROUPS);
             const g = groups.find(x => x.id === id);
             document.getElementById('modal-title').innerText = "تعديل الفوج";
             document.getElementById('edit-id').value  = g.id;
-            document.getElementById('g-name').value  = g.name;
-            document.getElementById('g-price').value = g.price;
+            document.getElementById('g-name').value   = g.name;
+            document.getElementById('g-price').value  = g.price;
             document.getElementById('g-sessions').value = g.sessionsCount || 4;
-            // تحميل الجدول: دعم القديم (day/time منفصل) والجديد (schedule array)
-            if (g.schedule && g.schedule.length > 0) {
-                loadScheduleToForm(g.schedule);
-            } else {
-                loadScheduleToForm([{ day: g.day || "", time: g.time || "" }]);
+
+            const sched = (g.schedule && g.schedule.length > 0)
+                ? g.schedule
+                : [{ day: g.day || "", time: g.time || "", endTime: "" }];
+
+            // تحقق هل هناك أوقات نهاية محفوظة
+            const hasEndTimes = sched.some(s => s.endTime);
+            if (hasEndTimes) {
+                showEndTime = true;
+                document.getElementById('toggle-endtime').checked = true;
+                document.getElementById('endtime-header-col').style.display = '';
             }
+            loadScheduleToForm(sched);
         } else {
             document.getElementById('modal-title').innerText = "إضافة فوج جديد";
             ['edit-id','g-name','g-price'].forEach(fid => document.getElementById(fid).value = "");
@@ -275,17 +589,13 @@
             if (oldGroup && oldGroup.name !== name) {
                 const students = await getAll(STORE_STUDENTS);
                 for (let s of students) {
-                    if (s.group === oldGroup.name) {
-                        s.group = name;
-                        await putItem(STORE_STUDENTS, s);
-                    }
+                    if (s.group === oldGroup.name) { s.group = name; await putItem(STORE_STUDENTS, s); }
                 }
             }
         } else {
             if (groups.some(g => g.name === name)) return alert("اسم الفوج موجود مسبقاً!");
         }
 
-        // نحفظ أيضاً day/time للتوافق مع البيانات القديمة
         await putItem(STORE_GROUPS, {
             id: targetId, name, price, sessionsCount,
             schedule,
@@ -299,21 +609,16 @@
     async function deleteGroup(id) {
         const groups = await getAll(STORE_GROUPS);
         const target = groups.find(g => g.id === id);
-        if (!confirm(`هل أنت متأكد من حذف ${target.name}؟`)) return;
-
+        if (!confirm(`هل أنت متأكد من حذف "${target.name}"؟`)) return;
         const students = await getAll(STORE_STUDENTS);
         for (let s of students) {
-            if (s.group === target.name) {
-                s.group = "غير محدد";
-                await putItem(STORE_STUDENTS, s);
-            }
+            if (s.group === target.name) { s.group = "غير محدد"; await putItem(STORE_STUDENTS, s); }
         }
         await deleteItem(STORE_GROUPS, id);
         render();
     }
 
     // ===================== ربط التلاميذ =====================
-
     function openLinkModal(groupName) {
         document.getElementById('target-group-name').value = groupName;
         document.getElementById('search-student').value = "";
@@ -325,38 +630,31 @@
         const groupName  = document.getElementById('target-group-name').value;
         const searchTerm = document.getElementById('search-student').value.toLowerCase();
         const container  = document.getElementById('available-students');
-        
         let students = await getAll(STORE_STUDENTS);
         if (searchTerm) students = students.filter(s => s.name.toLowerCase().includes(searchTerm));
 
         container.innerHTML = students.length ? students.map(s => {
             const inGroup = s.group === groupName;
             return `<div class="student-row">
-                <span>
+                <span style="font-weight:600;">
                     ${s.name}
-                    ${inGroup ? '<span style="color:var(--green);font-size:0.8em;"> ✓ مضاف هنا</span>' : ''}
+                    ${inGroup ? '<span style="color:var(--green);font-size:0.8em;margin-right:6px;">✓ مضاف</span>' : ''}
                 </span>
                 <button class="badge ${inGroup ? 'bg-red' : 'bg-blue'}"
                     onclick="linkToGroup(${s.id}, '${inGroup ? 'غير محدد' : groupName}')">
                     ${inGroup ? 'إلغاء' : 'إضافة'}
                 </button>
             </div>`;
-        }).join("") : "<p style='text-align:center;color:var(--slate);padding:20px;'>لا يوجد تلاميذ</p>";
+        }).join("") : "<p style='text-align:center;color:var(--slate);padding:24px;font-weight:600;'>لا يوجد تلاميذ</p>";
     }
 
     async function linkToGroup(stId, groupName) {
         const students = await getAll(STORE_STUDENTS);
         const s = students.find(x => x.id === stId);
-        if (s) {
-            s.group = groupName;
-            await putItem(STORE_STUDENTS, s);
-            renderAvailableStudents();
-            render();
-        }
+        if (s) { s.group = groupName; await putItem(STORE_STUDENTS, s); renderAvailableStudents(); render(); }
     }
 
-    // ===================== عرض أعضاء الفوج =====================
-
+    // ===================== عرض الأعضاء =====================
     async function renderMembers(groupName) {
         const allSt = await getAll(STORE_STUDENTS);
         const students = allSt.filter(s => s.group === groupName);
@@ -364,10 +662,10 @@
         document.getElementById('members-area').innerHTML = students.length
             ? students.map(s => `
                 <div class="student-row">
-                    <b>${s.name}</b>
+                    <b style="font-weight:700;">${s.name}</b>
                     <button class="btn-icon btn-del" onclick="removeFromGroup(${s.id},'${groupName}')" style="padding:8px; font-size:1em;">🗑️</button>
                 </div>`).join("")
-            : "<p style='text-align:center;padding:20px;color:var(--slate);'>لا يوجد تلاميذ في هذا الفوج.</p>";
+            : "<p style='text-align:center;padding:24px;color:var(--slate);font-weight:600;'>لا يوجد تلاميذ في هذا الفوج.</p>";
         document.getElementById('view-members-modal').style.display = 'flex';
     }
 
@@ -375,15 +673,15 @@
         if (!confirm("إزالة التلميذ من هذا الفوج؟")) return;
         const students = await getAll(STORE_STUDENTS);
         const s = students.find(x => x.id === stId);
-        if (s) {
-            s.group = "غير محدد";
-            await putItem(STORE_STUDENTS, s);
-            renderMembers(groupName);
-            render();
-        }
+        if (s) { s.group = "غير محدد"; await putItem(STORE_STUDENTS, s); renderMembers(groupName); render(); }
     }
 
     // ===================== العرض الرئيسي =====================
+    function fmtTime(t) {
+        if (!t) return '';
+        // قسر الأرقام لاتينية في الوقت
+        return t.replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+    }
 
     async function render() {
         const groups  = await getAll(STORE_GROUPS);
@@ -396,41 +694,45 @@
             linkedCount += members.length;
             const sess = g.sessionsCount || 4;
 
-            // بناء عرض الجدول الزمني
             const schedule = (g.schedule && g.schedule.length > 0)
                 ? g.schedule
-                : [{ day: g.day || '—', time: g.time || '—' }];
+                : [{ day: g.day || '—', time: g.time || '—', endTime: '' }];
 
-            const scheduleHTML = `
-                <div class="schedule-tags">
-                    ${schedule.map(s => `<span class="schedule-tag">📅 ${s.day} &nbsp; 🕐 ${s.time}</span>`).join('')}
-                </div>`;
+            const scheduleHTML = `<div class="schedule-tags">` +
+                schedule.map(s => {
+                    const timeStr = fmtTime(s.time);
+                    const endStr  = s.endTime ? fmtTime(s.endTime) : '';
+                    return `<span class="schedule-tag">📅 ${s.day}&nbsp; 🕐 ${timeStr}${endStr ? `<span class="end-sep">→</span><span class="end-t">${endStr}</span>` : ''}</span>`;
+                }).join('') + `</div>`;
+
+            const priceStr  = latinNums(g.price);
+            const membersStr = latinNums(members.length);
+            const sessStr   = latinNums(sess);
 
             return `
             <div class="group-card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <h3 class="group-title">📖 ${g.name}</h3>
-                    <span style="background:var(--blue); color:white; padding:2px 8px; border-radius:10px; font-size:0.8rem;">${sess} حصص</span>
+                    <span class="sessions-badge">${sessStr} حصص</span>
                 </div>
-                <div style="margin-bottom:10px;">${scheduleHTML}</div>
+                ${scheduleHTML}
                 <div class="group-info-grid">
-                    <div class="info-item">💰 ${g.price} دج</div>
-                    <div class="info-item">👥 ${members.length} تلاميذ</div>
+                    <div class="info-item">💰 <span>${priceStr}</span> دج</div>
+                    <div class="info-item">👥 <span>${membersStr}</span> تلاميذ</div>
                 </div>
                 <div class="action-grid">
-                    <button class="btn-icon btn-view" onclick="renderMembers('${g.name}')">📋</button>
-                    <button class="btn-icon btn-link" onclick="openLinkModal('${g.name}')">➕</button>
-                    <button class="btn-icon btn-edit" onclick="openGroupModal(${g.id})">✏️</button>
-                    <button class="btn-icon btn-del"  onclick="deleteGroup(${g.id})">🗑️</button>
+                    <button class="btn-icon btn-view" onclick="renderMembers('${g.name}')" title="عرض التلاميذ">📋</button>
+                    <button class="btn-icon btn-link" onclick="openLinkModal('${g.name}')" title="ربط تلميذ">➕</button>
+                    <button class="btn-icon btn-edit" onclick="openGroupModal(${g.id})" title="تعديل">✏️</button>
+                    <button class="btn-icon btn-del"  onclick="deleteGroup(${g.id})" title="حذف">🗑️</button>
                 </div>
             </div>`;
-        }).join("") : "<p style='text-align:center;padding:40px 0;color:var(--slate);'>لا توجد أفواج.</p>";
+        }).join("") : `<div class="empty-state"><div class="icon">📂</div><p>لا توجد أفواج بعد.<br>اضغط + لإضافة فوج جديد</p></div>`;
 
-        document.getElementById('total-groups-count').innerText   = groups.length;
-        document.getElementById('total-linked-students').innerText = linkedCount;
+        document.getElementById('total-groups-count').innerText   = latinNums(groups.length);
+        document.getElementById('total-linked-students').innerText = latinNums(linkedCount);
     }
 
-    // التشغيل
     openDB().then(() => render());
 </script>
 </body>
