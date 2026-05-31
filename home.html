@@ -55,6 +55,81 @@
             to   { opacity: 1; transform: translateY(0); }
         }
 
+        /* ═══════════════════════════════════════
+           بوابة الساعة — Gate Modal
+        ═══════════════════════════════════════ */
+        #gateModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15,23,42,0.85);
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(10px);
+        }
+        .gate-box {
+            background: var(--white);
+            padding: 38px 28px 32px;
+            border-radius: 28px;
+            width: 88%; max-width: 360px;
+            text-align: center;
+            box-shadow: 0 24px 60px rgba(15,23,42,0.25);
+            animation: fadeUp 0.4s ease both;
+        }
+        .gate-icon-wrap {
+            width: 72px; height: 72px;
+            background: linear-gradient(135deg, #dbeafe, #eff6ff);
+            border-radius: 22px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 18px;
+            box-shadow: 0 4px 16px rgba(37,99,235,0.15);
+        }
+        .gate-icon-wrap i { font-size: 2rem; color: var(--blue); }
+        .gate-box h3 {
+            margin: 0 0 8px;
+            color: var(--text);
+            font-size: 1.35rem;
+            font-weight: 900;
+        }
+        .gate-box p {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.75;
+            margin-bottom: 8px;
+        }
+        .gate-hour-badge {
+            display: inline-block;
+            background: var(--blue-light);
+            color: var(--blue);
+            font-weight: 900;
+            font-size: 1.1rem;
+            padding: 6px 20px;
+            border-radius: 12px;
+            border: 1.5px solid #bfdbfe;
+            margin-bottom: 22px;
+            letter-spacing: 1px;
+        }
+        .gate-btn {
+            background: linear-gradient(135deg, #1d4ed8, var(--blue));
+            color: #fff;
+            border: none;
+            width: 100%;
+            padding: 16px;
+            border-radius: 15px;
+            font-weight: 900;
+            cursor: pointer;
+            font-size: 1rem;
+            font-family: 'Cairo', sans-serif;
+            transition: opacity 0.2s, transform 0.1s;
+            box-shadow: 0 6px 18px rgba(37,99,235,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .gate-btn:active { transform: scale(0.97); }
+
         /* Modal */
         #nameModal {
             display: none; position: fixed; inset: 0;
@@ -390,6 +465,25 @@
 </head>
 <body>
 
+<!-- ═══════════════════════════════════════
+     بوابة الساعة — تظهر كل ساعة بالضبط
+═══════════════════════════════════════ -->
+<div id="gateModal">
+    <div class="gate-box">
+        <div class="gate-icon-wrap">
+            <i class="fas fa-clock"></i>
+        </div>
+        <h3>تسجيل الحضور الساعي</h3>
+        <p>حان وقت التسجيل الساعي.<br>اضغط على الزر للمتابعة واستخدام التطبيق.</p>
+        <div class="gate-hour-badge" id="gateHourBadge">00:00</div>
+        <button class="gate-btn" onclick="passGate()">
+            <i class="fas fa-check-circle"></i>
+            تسجيل الدخول والمتابعة
+        </button>
+    </div>
+</div>
+
+<!-- Modal اسم المستخدم -->
 <div id="nameModal">
     <div class="modal-box">
         <div class="modal-icon"><i class="fas fa-graduation-cap"></i></div>
@@ -490,6 +584,49 @@
 </div>
 
 <script>
+    /* ════════════════════════════════════════════
+       منطق البوابة الساعية
+       - المفتاح: kanashi_gate_passed_hour
+       - القيمة: رقم الساعة الأخيرة التي سجّل فيها
+    ════════════════════════════════════════════ */
+
+    /**
+     * هل يجب عرض البوابة الآن؟
+     * نعم إذا: الساعة الحالية (0-23) ≠ آخر ساعة تسجيل مخزّنة
+     */
+    function shouldShowGate() {
+        const currentHour = new Date().getHours();
+        const savedHour   = localStorage.getItem("kanashi_gate_passed_hour");
+        // لو ما سجّل أبداً OR الساعة تغيّرت منذ آخر تسجيل
+        return savedHour === null || parseInt(savedHour) !== currentHour;
+    }
+
+    /** يُسجّل الساعة الحالية كـ "مررت من البوابة" */
+    function markGatePassed() {
+        const currentHour = new Date().getHours();
+        localStorage.setItem("kanashi_gate_passed_hour", String(currentHour));
+    }
+
+    /** المستخدم ضغط "تسجيل الدخول" في البوابة */
+    window.passGate = function () {
+        markGatePassed();
+        document.getElementById("gateModal").style.display = "none";
+    };
+
+    /** تحقّق كل ثانية: هل انتقلنا لساعة جديدة؟ */
+    function startGateWatcher() {
+        setInterval(() => {
+            if (shouldShowGate()) {
+                // تحديث الوقت المعروض في البوابة
+                const now = new Date();
+                const hh  = String(now.getHours()).padStart(2, "0");
+                const mm  = String(now.getMinutes()).padStart(2, "0");
+                document.getElementById("gateHourBadge").innerText = `${hh}:${mm}`;
+                document.getElementById("gateModal").style.display = "flex";
+            }
+        }, 1000);
+    }
+
     /* ── قاعدة البيانات ── */
     const DB_NAME = "kanashi_db";
     const DB_VERSION = 2;
@@ -521,14 +658,10 @@
 
     /* ── الساعة ── */
     function updateClock() {
-        const now  = new Date();
-        const h    = now.getHours();
-        const m    = now.getMinutes();
-        const s    = now.getSeconds();
-
-        document.getElementById("clockHour").innerText = pad(h);
-        document.getElementById("clockMin").innerText  = pad(m);
-        document.getElementById("clockSec").innerText  = pad(s);
+        const now = new Date();
+        document.getElementById("clockHour").innerText = pad(now.getHours());
+        document.getElementById("clockMin").innerText  = pad(now.getMinutes());
+        document.getElementById("clockSec").innerText  = pad(now.getSeconds());
     }
 
     /* ── التحية حسب الوقت ── */
@@ -541,7 +674,7 @@
         return                          { period: "🌙 وقت الراحة",       greeting: `تصبح على خير، ${name}` };
     }
 
-    /* ── الرسائل التحفيزية حسب الوقت ── */
+    /* ── الرسائل التحفيزية ── */
     function getMotivationalMsg() {
         const h = new Date().getHours();
         const morning = [
@@ -572,7 +705,7 @@
         ];
 
         let pool;
-        if (h >= 5  && h < 12) pool = morning;
+        if      (h >= 5  && h < 12) pool = morning;
         else if (h >= 12 && h < 14) pool = noon;
         else if (h >= 14 && h < 18) pool = afternoon;
         else if (h >= 18 && h < 21) pool = evening;
@@ -584,25 +717,43 @@
     /* ── init ── */
     async function init() {
         const name = localStorage.getItem("kanashi_user_name");
-        if (!name) { document.getElementById("nameModal").style.display = "flex"; return; }
 
+        // 1) لو ما سجّل اسمه بعد → modal الاسم
+        if (!name) {
+            document.getElementById("nameModal").style.display = "flex";
+            return;
+        }
+
+        // 2) تحقق من البوابة الساعية
+        if (shouldShowGate()) {
+            const now = new Date();
+            const hh  = pad(now.getHours());
+            const mm  = pad(now.getMinutes());
+            document.getElementById("gateHourBadge").innerText = `${hh}:${mm}`;
+            document.getElementById("gateModal").style.display = "flex";
+            // ننتظر ما يضغط passGate — startGateWatcher يكمل
+        }
+
+        // 3) أظهر المحتوى الرئيسي
         document.getElementById("appContainer").style.display = "block";
 
-        // تحديث الساعة كل ثانية
+        // الساعة
         updateClock();
         setInterval(updateClock, 1000);
 
+        // شغّل المراقب الساعي
+        startGateWatcher();
+
         // التحية والرسالة
         const { period, greeting } = getGreetingInfo(name);
-        document.getElementById("timePeriod").innerText    = period;
-        document.getElementById("greetingText").innerText  = greeting;
+        document.getElementById("timePeriod").innerText     = period;
+        document.getElementById("greetingText").innerText   = greeting;
         document.getElementById("motivationalMsg").innerText = getMotivationalMsg();
 
-        // تغيير الرسالة التحفيزية كل 30 ثانية
         setInterval(() => {
             const el = document.getElementById("motivationalMsg");
             el.style.animation = 'none';
-            el.offsetHeight; // reflow
+            el.offsetHeight;
             el.style.animation = '';
             el.innerText = getMotivationalMsg();
         }, 30000);
@@ -642,7 +793,12 @@
 
     window.saveUserAndStart = function () {
         const val = document.getElementById("userNameInput").value.trim();
-        if (val) { localStorage.setItem("kanashi_user_name", val); location.reload(); }
+        if (val) {
+            localStorage.setItem("kanashi_user_name", val);
+            // عند أول تسجيل للاسم نسجّل البوابة تلقائياً
+            markGatePassed();
+            location.reload();
+        }
     };
 
     window.editQuickNote = function () {
