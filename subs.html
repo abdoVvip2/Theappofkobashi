@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>متابعة الحضور والديون - كناشي Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
@@ -11,92 +12,220 @@
             --red: #ef4444; --green: #22c55e; --orange: #f59e0b;
             --slate: #64748b; --dark: #0f172a; --radius: 18px;
         }
-        body { font-family: "Segoe UI", Tahoma, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--dark); line-height: 1.5; }
-        .app-wrapper { max-width: 600px; margin: 0 auto; padding-bottom: 50px; }
-        
-        .ai-dashboard { background: linear-gradient(135deg, #1e293b, #0f172a); color: white; padding: 20px; border-radius: var(--radius); margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px; }
-        .stat-box { background: rgba(255,255,255,0.08); padding: 12px; border-radius: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
-        .stat-box small { display: block; color: #94a3b8; font-size: 0.8rem; margin-bottom: 4px; }
-        .stat-box b { font-size: 1.2rem; }
-        .ai-tip { background: rgba(239, 68, 68, 0.12); border-right: 4px solid var(--red); padding: 12px; border-radius: 10px; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 
-        .group-section { background: var(--white); border-radius: var(--radius); margin-bottom: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0; }
-        .group-header { padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #f8fafc; font-weight: bold; border-bottom: 1px solid #e2e8f0; }
+        * { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; }
+
+        body {
+            font-family: 'Cairo', "Segoe UI", Tahoma, sans-serif;
+            background: var(--bg); margin: 0; padding: 15px;
+            color: var(--dark); line-height: 1.5;
+        }
+        .app-wrapper { max-width: 600px; margin: 0 auto; padding-bottom: 50px; }
+
+        /* ── Dashboard أبيض ── */
+        .ai-dashboard {
+            background: var(--white);
+            color: var(--dark);
+            padding: 20px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(37,99,235,0.10);
+            border: 1px solid #e2e8f0;
+            border-top: 4px solid var(--blue);
+        }
+        .ai-dashboard h3 { margin: 0 0 14px 0; font-weight: 900; font-size: 1.1rem; color: var(--dark); }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-box {
+            background: #f1f5f9;
+            padding: 13px 10px; border-radius: 12px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+            transition: transform 0.15s;
+        }
+        .stat-box:hover { transform: translateY(-2px); }
+        .stat-box small { display: block; color: var(--slate); font-size: 0.78rem; margin-bottom: 5px; font-weight: 600; }
+        .stat-box b {
+            font-size: 1.2rem; font-weight: 900;
+            font-variant-numeric: lining-nums;
+            direction: ltr; display: block;
+        }
+
+        .ai-tip {
+            background: #fef2f2;
+            border-right: 4px solid var(--red);
+            padding: 11px 14px; border-radius: 10px;
+            font-size: 0.85rem;
+            display: flex; align-items: center; gap: 10px;
+            margin-top: 12px; color: #b91c1c; font-weight: 600;
+        }
+        .ai-tip.ok { background: #f0fdf4; border-color: var(--green); color: #15803d; }
+
+        /* ── Group sections ── */
+        .group-section {
+            background: var(--white); border-radius: var(--radius);
+            margin-bottom: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            overflow: hidden; border: 1px solid #e2e8f0;
+        }
+        .group-header {
+            padding: 16px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; background: #f8fafc;
+            font-weight: 800; border-bottom: 1px solid #e2e8f0;
+            transition: background 0.15s;
+        }
+        .group-header:hover { background: #f1f5f9; }
         .students-list { display: none; padding: 15px; }
         .students-list.open { display: block; }
 
-        .student-card { background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 15px; border-right: 5px solid var(--green); }
+        /* ── Student cards ── */
+        .student-card {
+            background: #f8fafc; padding: 15px;
+            border-radius: 12px; margin-bottom: 14px;
+            border-right: 5px solid var(--green);
+            transition: box-shadow 0.15s;
+        }
+        .student-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.08); }
         .student-card.has-debt { border-right-color: var(--red); background: #fff5f5; }
-        .debt-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; color: white; font-weight: bold; }
+
+        .student-name { font-weight: 800; font-size: 1rem; }
+        .debt-badge {
+            font-size: 0.75rem; padding: 4px 12px;
+            border-radius: 20px; color: white; font-weight: 700;
+            font-variant-numeric: lining-nums;
+        }
         .debt-badge.paid { background: var(--green); }
         .debt-badge.unpaid { background: var(--red); }
 
-        .attendance-boxes { display: flex; gap: 10px; justify-content: center; margin: 15px 0; flex-wrap: wrap; }
+        /* ── Attendance boxes ── */
+        .attendance-boxes {
+            display: flex; gap: 10px; justify-content: center;
+            margin: 14px 0; flex-wrap: wrap;
+        }
         .box-wrapper { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-        .box { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid #cbd5e1; background: #fff; color: #64748b; cursor: default; position: relative; }
+        .box {
+            width: 40px; height: 40px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 900; border: 2px solid #cbd5e1;
+            background: #fff; color: #64748b;
+            cursor: default; font-size: 0.95rem;
+            font-variant-numeric: lining-nums;
+        }
         .box.present { background: var(--green); color: white; border-color: var(--green); }
-        .box.absent { background: var(--red); color: white; border-color: var(--red); }
-        .box-date { font-size: 0.6rem; color: var(--slate); text-align: center; max-width: 44px; }
+        .box.absent  { background: var(--red);   color: white; border-color: var(--red);   }
+        .box.absent-free { background: #f97316; color: white; border-color: #ea580c; }
+        .box-date { font-size: 0.6rem; color: var(--slate); text-align: center; max-width: 44px; font-variant-numeric: lining-nums; }
 
+        /* ── Action buttons ── */
         .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .btn-act { padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-family: inherit; }
-        .btn-pay { background: var(--blue); grid-column: span 3; margin-top: 5px; }
+        .btn-act {
+            padding: 10px; border: none; border-radius: 9px;
+            font-weight: 700; cursor: pointer; color: white;
+            font-family: 'Cairo', inherit; transition: opacity 0.15s, transform 0.1s;
+            font-size: 0.88rem;
+        }
+        .btn-act:active { transform: scale(0.94); }
+        .btn-act:hover { opacity: 0.88; }
 
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.8); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-content { background: var(--white); padding: 25px; border-radius: 24px; width: 90%; max-width: 380px; text-align: center; }
+        .btn-pay {
+            background: var(--blue); grid-column: span 3;
+            margin-top: 4px; padding: 12px;
+        }
+        .btn-absent-free {
+            background: #f97316; grid-column: span 3;
+            margin-top: 4px; padding: 12px;
+        }
+
+        /* ── Modals ── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(15,23,42,0.78);
+            backdrop-filter: blur(5px);
+            z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: var(--white); padding: 26px;
+            border-radius: 24px; width: 90%; max-width: 380px;
+            text-align: center;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            animation: modalIn 0.2s ease;
+        }
+        @keyframes modalIn {
+            from { opacity:0; transform:translateY(16px) scale(0.97); }
+            to   { opacity:1; transform:translateY(0) scale(1); }
+        }
+        .modal-content h3 { margin-top: 0; font-weight: 900; }
+        .modal-content p  { color: var(--slate); font-size: 0.95rem; }
+
+        .modal-btn {
+            width: 100%; padding: 14px; border: none; border-radius: 12px;
+            color: white; font-weight: 700; font-size: 1rem;
+            cursor: pointer; margin-bottom: 9px;
+            font-family: 'Cairo', inherit;
+            transition: opacity 0.15s;
+        }
+        .modal-btn:hover { opacity: 0.9; }
+        .modal-btn:last-child { margin-bottom: 0; }
     </style>
 </head>
 <body>
 
 <div class="app-wrapper">
     <div class="ai-dashboard">
-        <h3 style="margin:0;"><i class="fas fa-chart-line"></i> التحليل المالي والسيولة</h3>
+        <h3><i class="fas fa-chart-line" style="color:var(--blue);margin-left:8px;"></i> التحليل المالي والسيولة</h3>
         <div class="stats-grid">
-            <div class="stat-box"><small>السيولة (Cash)</small><b id="stat-cash" style="color:#86efac;">0 دج</b></div>
-            <div class="stat-box"><small>التحصيل</small><b id="stat-ratio" style="color:#60a5fa;">0%</b></div>
-            <div class="stat-box"><small>التوقع المالي</small><b id="stat-projection" style="color:#fcd34d;">0 دج</b></div>
-            <div class="stat-box"><small>ربح المقعد</small><b id="stat-avg-seat">0 دج</b></div>
+            <div class="stat-box"><small>السيولة (Cash)</small><b id="stat-cash" style="color:var(--green);">0 دج</b></div>
+            <div class="stat-box"><small>التحصيل</small><b id="stat-ratio" style="color:var(--blue);">0%</b></div>
+            <div class="stat-box"><small>التوقع المالي</small><b id="stat-projection" style="color:var(--orange);">0 دج</b></div>
+            <div class="stat-box"><small>ربح المقعد</small><b id="stat-avg-seat" style="color:var(--slate);">0 دج</b></div>
         </div>
         <div id="ai-tip-container"></div>
     </div>
     <div id="groups-container"></div>
 </div>
 
-<!-- Modal التجديد (نهاية الحصص) -->
+<!-- Modal التجديد -->
 <div id="renew-modal" class="modal-overlay">
     <div class="modal-content">
-        <h3>تجديد الاشتراك</h3>
-        <p style="color:var(--slate);" id="renew-text">انتهت الحصص، اختر طريقة الدفع:</p>
-        <button class="btn-act" style="background:var(--green); width:100%; margin-bottom:10px; padding:15px;" onclick="processRenewal(true)">دفع مقدماً (نقداً)</button>
-        <button class="btn-act" style="background:var(--red); width:100%; margin-bottom:10px; padding:15px;" onclick="processRenewal(false)">قيد كدين (حصة بحصة)</button>
-        <button class="btn-act" style="background:var(--slate); width:100%; padding:15px;" onclick="closeModal('renew-modal')">إلغاء</button>
+        <h3>🔄 تجديد الاشتراك</h3>
+        <p id="renew-text">انتهت الحصص، اختر طريقة الدفع:</p>
+        <button class="modal-btn" style="background:var(--green);" onclick="processRenewal(true)">✅ دفع مقدماً (نقداً)</button>
+        <button class="modal-btn" style="background:var(--red);" onclick="processRenewal(false)">🔴 قيد كدين (حصة بحصة)</button>
+        <button class="modal-btn" style="background:var(--slate);" onclick="closeModal('renew-modal')">إلغاء</button>
     </div>
 </div>
 
-<!-- Modal أول حصة: سؤال طريقة الدفع -->
+<!-- Modal أول حصة -->
 <div id="first-session-modal" class="modal-overlay">
     <div class="modal-content">
         <h3>🎓 أول حصة</h3>
-        <p style="color:var(--slate);">هل دفع التلميذ مقدماً أم بالدين؟</p>
-        <button class="btn-act" style="background:var(--green); width:100%; margin-bottom:10px; padding:15px;" onclick="processFirstSession(true)">✅ دفع مقدماً (نقداً)</button>
-        <button class="btn-act" style="background:var(--red); width:100%; margin-bottom:10px; padding:15px;" onclick="processFirstSession(false)">🔴 قيد كدين (حصة بحصة)</button>
-        <button class="btn-act" style="background:var(--slate); width:100%; padding:15px;" onclick="closeModal('first-session-modal')">إلغاء</button>
+        <p>هل دفع التلميذ مقدماً أم بالدين؟</p>
+        <button class="modal-btn" style="background:var(--green);" onclick="processFirstSession(true)">✅ دفع مقدماً (نقداً)</button>
+        <button class="modal-btn" style="background:var(--red);" onclick="processFirstSession(false)">🔴 قيد كدين (حصة بحصة)</button>
+        <button class="modal-btn" style="background:var(--slate);" onclick="closeModal('first-session-modal')">إلغاء</button>
     </div>
 </div>
 
 <script>
-    const DB_NAME = "kanashi_db";
-    const DB_VERSION = 2;
-    const STORE_STUDENTS = "students";
-    const STORE_GROUPS = "groups";
-    
+    // ── قسر الأرقام لاتينية ──
+    function lat(val) {
+        return String(val).replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+    }
+    function fmtMoney(val) {
+        return lat(Number(val || 0).toLocaleString('en-US')) + ' دج';
+    }
+    function fmtPct(val) {
+        return lat(val) + '%';
+    }
+
+    const DB_NAME = "kanashi_db", DB_VERSION = 2;
+    const STORE_STUDENTS = "students", STORE_GROUPS = "groups";
     let db = null;
     let pendingRenewId = null, pendingGroupObj = null;
     let pendingFirstSessionId = null, pendingFirstSessionGroupObj = null, pendingFirstSessionStatus = null;
     let openGroupId = null;
 
-    // --- IndexedDB Core ---
     function openDB() {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -104,166 +233,190 @@
             req.onerror = (e) => reject(e.target.error);
         });
     }
-
-    function getAll(storeName) {
-        return new Promise(resolve => {
-            const tx = db.transaction(storeName, "readonly");
-            const req = tx.objectStore(storeName).getAll();
-            req.onsuccess = () => resolve(req.result);
+    function getAll(s) {
+        return new Promise(res => {
+            const tx = db.transaction(s, "readonly");
+            const req = tx.objectStore(s).getAll();
+            req.onsuccess = () => res(req.result);
         });
     }
-
-    function putItem(storeName, item) {
-        return new Promise(resolve => {
-            const tx = db.transaction(storeName, "readwrite");
-            const req = tx.objectStore(storeName).put(item);
-            req.onsuccess = () => resolve();
+    function putItem(s, item) {
+        return new Promise(res => {
+            const tx = db.transaction(s, "readwrite");
+            tx.objectStore(s).put(item).onsuccess = () => res();
         });
     }
-
     function todayDate() {
         const d = new Date();
-        return `${d.getDate()}/${d.getMonth()+1}`;
+        return lat(`${d.getDate()}/${d.getMonth()+1}`);
     }
 
-    // --- Logic ---
+    // ── التحليل المالي ──
     async function analyzeAdvanced() {
         const students = await getAll(STORE_STUDENTS);
         let cash = 0, totalDebt = 0;
-        
         students.forEach(s => {
             cash += Number(s.paid || 0);
             totalDebt += Number(s.debt || 0);
         });
-
         const projection = cash + totalDebt;
-        document.getElementById("stat-cash").innerText = cash.toLocaleString() + " دج";
-        document.getElementById("stat-projection").innerText = projection.toLocaleString() + " دج";
-        document.getElementById("stat-ratio").innerText = (projection > 0 ? Math.round((cash/projection)*100) : 0) + "%";
-        document.getElementById("stat-avg-seat").innerText = (students.length > 0 ? Math.round(cash/students.length) : 0).toLocaleString() + " دج";
+        const ratio = projection > 0 ? Math.round((cash / projection) * 100) : 0;
+
+        document.getElementById("stat-cash").innerText       = fmtMoney(cash);
+        document.getElementById("stat-projection").innerText = fmtMoney(projection);
+        document.getElementById("stat-ratio").innerText      = fmtPct(ratio);
+        document.getElementById("stat-avg-seat").innerText   = fmtMoney(students.length > 0 ? Math.round(cash / students.length) : 0);
 
         const tipBox = document.getElementById("ai-tip-container");
-        tipBox.innerHTML = totalDebt > 0 
-            ? `<div class="ai-tip"><i class="fas fa-exclamation-circle"></i> ديون عالقة: ${totalDebt.toLocaleString()} دج.</div>`
-            : `<div class="ai-tip" style="background:rgba(34,197,94,0.1); border-color:var(--green); color:var(--green)"><i class="fas fa-check"></i> الحسابات مضبوطة.</div>`;
+        tipBox.innerHTML = totalDebt > 0
+            ? `<div class="ai-tip"><i class="fas fa-exclamation-circle"></i> ديون عالقة: ${fmtMoney(totalDebt)}</div>`
+            : `<div class="ai-tip ok"><i class="fas fa-check-circle"></i> الحسابات مضبوطة تماماً.</div>`;
     }
 
+    // ── العرض الرئيسي ──
     async function renderUI() {
         await analyzeAdvanced();
-        const groups = await getAll(STORE_GROUPS);
+        const groups   = await getAll(STORE_GROUPS);
         const students = await getAll(STORE_STUDENTS);
         const container = document.getElementById("groups-container");
-        
+
         container.innerHTML = groups.map(g => {
             const gSt = students.filter(s => s.group === g.name);
             const isOpen = openGroupId == g.id;
             const maxSessions = g.sessionsCount || 4;
-            
-            const cards = gSt.map(s => {
-                // موازنة مصفوفة الحضور
-                let att = s.attendance;
-                if (!att || att.length !== maxSessions) {
-                    let newAtt = Array(maxSessions).fill("");
-                    if (att) {
-                        for(let i=0; i<Math.min(att.length, maxSessions); i++) newAtt[i] = att[i];
-                    }
-                    att = newAtt;
-                }
 
-                // موازنة مصفوفة التواريخ
-                let dates = s.dates;
-                if (!dates || dates.length !== maxSessions) {
-                    let newDates = Array(maxSessions).fill("");
-                    if (dates) {
-                        for(let i=0; i<Math.min(dates.length, maxSessions); i++) newDates[i] = dates[i];
-                    }
-                    dates = newDates;
+            const cards = gSt.map(s => {
+                // موازنة attendance
+                let att = s.attendance || [];
+                if (att.length !== maxSessions) {
+                    let n = Array(maxSessions).fill("");
+                    att.forEach((v, i) => { if (i < maxSessions) n[i] = v; });
+                    att = n;
+                }
+                // موازنة dates
+                let dates = s.dates || [];
+                if (dates.length !== maxSessions) {
+                    let n = Array(maxSessions).fill("");
+                    dates.forEach((v, i) => { if (i < maxSessions) n[i] = v; });
+                    dates = n;
                 }
 
                 const isD = Number(s.debt || 0) > 0;
+                const debtStr = lat(s.debt);
+
+                // حالة absent-free: غياب بدون دين (برتقالي)
+                const boxesHTML = att.map((v, i) => {
+                    let cls = v === 'present' ? 'present' : v === 'absent-free' ? 'absent-free' : v === 'absent' ? 'absent' : '';
+                    return `<div class="box-wrapper">
+                        <div class="box ${cls}">${lat(i+1)}</div>
+                        <div class="box-date">${dates[i] ? lat(dates[i]) : ''}</div>
+                    </div>`;
+                }).join("");
+
                 return `
-                    <div class="student-card ${isD ? 'has-debt' : ''}">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <b>${s.name}</b>
-                            <span class="debt-badge ${isD ? 'unpaid' : 'paid'}">${isD ? s.debt+' دج' : 'خالص'}</span>
-                        </div>
-                        <div class="attendance-boxes">
-                            ${att.map((v, i) => `
-                                <div class="box-wrapper">
-                                    <div class="box ${v}">${i+1}</div>
-                                    <div class="box-date">${dates[i] || ''}</div>
-                                </div>
-                            `).join("")}
-                        </div>
-                        <div class="actions">
-                            <button class="btn-act" style="background:var(--green)" onclick="mark(${s.id}, ${g.id}, 'present')">حاضر</button>
-                            <button class="btn-act" style="background:var(--red)" onclick="mark(${s.id}, ${g.id}, 'absent')">غائب</button>
-                            <button class="btn-act" style="background:var(--slate)" onclick="undo(${s.id}, ${g.id})">تراجع</button>
-                            ${isD ? `<button class="btn-act btn-pay" onclick="payDebt(${s.id})">تسوية الدين</button>` : ''}
-                        </div>
+                <div class="student-card ${isD ? 'has-debt' : ''}">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span class="student-name">${s.name}</span>
+                        <span class="debt-badge ${isD ? 'unpaid' : 'paid'}">${isD ? debtStr + ' دج' : 'خالص'}</span>
                     </div>
-                `;
-            }).join("") || "<p style='text-align:center; padding:10px; color:var(--slate);'>لا تلاميذ في هذا الفوج</p>";
+                    <div class="attendance-boxes">${boxesHTML}</div>
+                    <div class="actions">
+                        <button class="btn-act" style="background:var(--green);" onclick="mark(${s.id}, ${g.id}, 'present')">حاضر</button>
+                        <button class="btn-act" style="background:var(--red);"   onclick="mark(${s.id}, ${g.id}, 'absent')">غائب</button>
+                        <button class="btn-act" style="background:var(--slate);" onclick="undo(${s.id}, ${g.id})">تراجع</button>
+                        ${isD ? `<button class="btn-act btn-absent-free" onclick="markAbsentFree(${s.id}, ${g.id})">🟠 غائب بدون دين</button>` : ''}
+                        ${isD ? `<button class="btn-act btn-pay" onclick="payDebt(${s.id})">💵 تسوية الدين</button>` : ''}
+                    </div>
+                </div>`;
+            }).join("") || "<p style='text-align:center; padding:16px; color:var(--slate); font-weight:600;'>لا تلاميذ في هذا الفوج</p>";
+
+            const countStr = lat(gSt.length);
+            const sessStr  = lat(maxSessions);
 
             return `
-                <div class="group-section">
-                    <div class="group-header" onclick="toggle(${g.id})">
-                        <span>${g.name} (${gSt.length}) - ${maxSessions} حصص</span>
-                        <i class="fas fa-chevron-down" style="transform: ${isOpen ? 'rotate(180deg)' : 'none'}"></i>
-                    </div>
-                    <div class="students-list ${isOpen ? 'open' : ''}">${cards}</div>
-                </div>`;
+            <div class="group-section">
+                <div class="group-header" onclick="toggle(${g.id})">
+                    <span>${g.name} (${countStr}) — ${sessStr} حصص</span>
+                    <i class="fas fa-chevron-down" style="transition:transform 0.25s; transform:${isOpen ? 'rotate(180deg)' : 'rotate(0)'}"></i>
+                </div>
+                <div class="students-list ${isOpen ? 'open' : ''}">${cards}</div>
+            </div>`;
         }).join("");
     }
 
+    // ── تسجيل حضور/غياب (مع دين إن كان الوضع debt) ──
     async function mark(stId, gId, status) {
         const students = await getAll(STORE_STUDENTS);
-        const groups = await getAll(STORE_GROUPS);
+        const groups   = await getAll(STORE_GROUPS);
         const s = students.find(x => x.id === stId);
         const g = groups.find(x => x.id === gId);
         const maxSessions = g.sessionsCount || 4;
-        
-        // موازنة attendance
-        if(!s.attendance || s.attendance.length !== maxSessions) {
-             let newAtt = Array(maxSessions).fill("");
-             if(s.attendance) for(let i=0; i<Math.min(s.attendance.length, maxSessions); i++) newAtt[i] = s.attendance[i];
-             s.attendance = newAtt;
-        }
 
-        // موازنة dates
-        if(!s.dates || s.dates.length !== maxSessions) {
-             let newDates = Array(maxSessions).fill("");
-             if(s.dates) for(let i=0; i<Math.min(s.dates.length, maxSessions); i++) newDates[i] = s.dates[i];
-             s.dates = newDates;
+        // موازنة
+        if (!s.attendance || s.attendance.length !== maxSessions) {
+            let n = Array(maxSessions).fill(""); (s.attendance||[]).forEach((v,i)=>{ if(i<maxSessions) n[i]=v; }); s.attendance = n;
+        }
+        if (!s.dates || s.dates.length !== maxSessions) {
+            let n = Array(maxSessions).fill(""); (s.dates||[]).forEach((v,i)=>{ if(i<maxSessions) n[i]=v; }); s.dates = n;
         }
 
         let idx = s.attendance.indexOf("");
 
         // كل الحصص امتلأت → تجديد
-        if(idx === -1) {
-            pendingRenewId = stId; 
-            pendingGroupObj = g;
+        if (idx === -1) {
+            pendingRenewId = stId; pendingGroupObj = g;
             document.getElementById("renew-modal").style.display = "flex";
             return;
         }
 
-        // أول حصة (idx === 0 وطريقة الدفع غير محددة بعد) → اسأل عن الدفع
-        if(idx === 0 && !s.paymentMode) {
-            pendingFirstSessionId = stId;
-            pendingFirstSessionGroupObj = g;
-            pendingFirstSessionStatus = status;
+        // أول حصة بدون طريقة دفع → اسأل
+        if (idx === 0 && !s.paymentMode) {
+            pendingFirstSessionId = stId; pendingFirstSessionGroupObj = g; pendingFirstSessionStatus = status;
             document.getElementById("first-session-modal").style.display = "flex";
             return;
         }
 
-        // تسجيل الحضور والتاريخ
         s.attendance[idx] = status;
         s.dates[idx] = todayDate();
 
-        if(s.paymentMode === "debt") {
-            s.debt = (Number(s.debt)||0) + Math.round(Number(g.price)/maxSessions);
+        if (s.paymentMode === "debt" && status === 'absent') {
+            // غياب عادي مع دين → يضاف الدين
+            s.debt = (Number(s.debt)||0) + Math.round(Number(g.price) / maxSessions);
+        } else if (s.paymentMode === "debt" && status === 'present') {
+            s.debt = (Number(s.debt)||0) + Math.round(Number(g.price) / maxSessions);
         }
-        
+
+        await putItem(STORE_STUDENTS, s);
+        renderUI();
+    }
+
+    // ── غائب بدون دين (للتلميذ المدين فقط) ──
+    async function markAbsentFree(stId, gId) {
+        const students = await getAll(STORE_STUDENTS);
+        const groups   = await getAll(STORE_GROUPS);
+        const s = students.find(x => x.id === stId);
+        const g = groups.find(x => x.id === gId);
+        const maxSessions = g.sessionsCount || 4;
+
+        if (!s.attendance || s.attendance.length !== maxSessions) {
+            let n = Array(maxSessions).fill(""); (s.attendance||[]).forEach((v,i)=>{ if(i<maxSessions) n[i]=v; }); s.attendance = n;
+        }
+        if (!s.dates || s.dates.length !== maxSessions) {
+            let n = Array(maxSessions).fill(""); (s.dates||[]).forEach((v,i)=>{ if(i<maxSessions) n[i]=v; }); s.dates = n;
+        }
+
+        let idx = s.attendance.indexOf("");
+        if (idx === -1) {
+            pendingRenewId = stId; pendingGroupObj = g;
+            document.getElementById("renew-modal").style.display = "flex";
+            return;
+        }
+
+        // تسجيل كغائب-مجاني (برتقالي) بدون إضافة دين
+        s.attendance[idx] = 'absent-free';
+        s.dates[idx] = todayDate();
+        // لا نغير s.debt
+
         await putItem(STORE_STUDENTS, s);
         renderUI();
     }
@@ -275,8 +428,7 @@
         const status = pendingFirstSessionStatus;
         const maxSessions = g.sessionsCount || 4;
 
-        // تعيين طريقة الدفع
-        if(isCash) {
+        if (isCash) {
             s.paymentMode = "cash";
             s.paid = (Number(s.paid)||0) + Number(g.price);
             s.debt = 0;
@@ -284,20 +436,14 @@
             s.paymentMode = "debt";
         }
 
-        // موازنة attendance و dates إذا لزم
-        if(!s.attendance || s.attendance.length !== maxSessions) {
-            s.attendance = Array(maxSessions).fill("");
-        }
-        if(!s.dates || s.dates.length !== maxSessions) {
-            s.dates = Array(maxSessions).fill("");
-        }
+        if (!s.attendance || s.attendance.length !== maxSessions) s.attendance = Array(maxSessions).fill("");
+        if (!s.dates || s.dates.length !== maxSessions) s.dates = Array(maxSessions).fill("");
 
-        // تسجيل الحصة الأولى
         s.attendance[0] = status;
         s.dates[0] = todayDate();
 
-        if(!isCash) {
-            s.debt = (Number(s.debt)||0) + Math.round(Number(g.price)/maxSessions);
+        if (!isCash) {
+            s.debt = (Number(s.debt)||0) + Math.round(Number(g.price) / maxSessions);
         }
 
         await putItem(STORE_STUDENTS, s);
@@ -314,14 +460,14 @@
         s.attendance = Array(maxSessions).fill("");
         s.dates = Array(maxSessions).fill("");
 
-        if(isCash) {
+        if (isCash) {
             s.paid = (Number(s.paid)||0) + Number(g.price);
             s.paymentMode = "cash";
             s.debt = 0;
         } else {
             s.paymentMode = "debt";
         }
-        
+
         await putItem(STORE_STUDENTS, s);
         closeModal('renew-modal');
         renderUI();
@@ -329,25 +475,24 @@
 
     async function undo(stId, gId) {
         const students = await getAll(STORE_STUDENTS);
-        const groups = await getAll(STORE_GROUPS);
+        const groups   = await getAll(STORE_GROUPS);
         const s = students.find(x => x.id === stId);
         const g = groups.find(x => x.id === gId);
         const maxSessions = g.sessionsCount || 4;
-        
-        if(!s.attendance) return;
+        if (!s.attendance) return;
 
-        for(let i=s.attendance.length-1; i>=0; i--) {
-            if(s.attendance[i] !== "") {
-                if(s.paymentMode === "debt") {
-                    s.debt = Math.max(0, (Number(s.debt)||0) - Math.round(Number(g.price)/maxSessions));
+        for (let i = s.attendance.length - 1; i >= 0; i--) {
+            if (s.attendance[i] !== "") {
+                const wasAbsentFree = s.attendance[i] === 'absent-free';
+                // لا نطرح دين إن كان غياب مجاني
+                if (!wasAbsentFree && s.paymentMode === "debt") {
+                    s.debt = Math.max(0, (Number(s.debt)||0) - Math.round(Number(g.price) / maxSessions));
                 }
                 s.attendance[i] = "";
-                // مسح التاريخ معه
-                if(s.dates && s.dates.length > i) s.dates[i] = "";
-                // إذا كانت أول حصة، أعد طريقة الدفع لغير محددة
-                if(i === 0) {
+                if (s.dates && s.dates.length > i) s.dates[i] = "";
+                if (i === 0) {
                     s.paymentMode = null;
-                    s.paid = Math.max(0, (Number(s.paid)||0) - Number(g.price));
+                    if (!wasAbsentFree) s.paid = Math.max(0, (Number(s.paid)||0) - Number(g.price));
                 }
                 break;
             }
@@ -366,14 +511,9 @@
         renderUI();
     }
 
-    function toggle(id) {
-        openGroupId = (openGroupId === id) ? null : id;
-        renderUI();
-    }
-
+    function toggle(id) { openGroupId = (openGroupId === id) ? null : id; renderUI(); }
     function closeModal(id) { document.getElementById(id).style.display = "none"; }
 
-    // Init
     openDB().then(() => renderUI());
 </script>
 </body>
