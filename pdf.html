@@ -4,137 +4,271 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مستخرج تقارير كناشي Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --dark: #0f172a; --blue: #2563eb; --bg: #f1f5f9; --white: #ffffff; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: var(--dark); }
-        .container { max-width: 900px; margin: 0 auto; }
-        .header { background: var(--dark); color: white; padding: 20px; border-radius: 15px; text-align: center; margin-bottom: 20px; }
-        
-        .group-card { background: var(--white); padding: 20px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-        .group-info { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--bg); padding-bottom: 10px; margin-bottom: 15px; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: center; }
-        th { background: #f8fafc; color: #64748b; }
-        
-        .btn-export { 
-            background: var(--blue); color: white; border: none; padding: 12px 25px; 
-            border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%;
-            display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 15px;
-            transition: 0.3s;
+        :root {
+            --dark: #0f172a; --blue: #2563eb; --bg: #f8fafc;
+            --white: #ffffff; --slate: #64748b; --green: #22c55e;
+            --red: #ef4444; --orange: #f97316; --radius: 18px;
         }
-        .btn-export:hover { background: #1d4ed8; opacity: 0.9; }
-        
-        .status-present { color: #22c55e; font-weight: bold; }
-        .status-absent { color: #ef4444; font-weight: bold; }
-        .no-data { text-align: center; padding: 40px; color: #64748b; }
+
+        * { font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; box-sizing: border-box; }
+
+        body {
+            font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg); margin: 0; padding: 20px;
+            color: var(--dark); line-height: 1.5;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; padding-bottom: 40px; }
+
+        /* ── Header أبيض ── */
+        .header {
+            background: var(--white);
+            color: var(--dark);
+            padding: 22px 26px;
+            border-radius: var(--radius);
+            margin-bottom: 22px;
+            border: 1px solid #e2e8f0;
+            border-top: 4px solid var(--blue);
+            box-shadow: 0 4px 16px rgba(37,99,235,0.09);
+            display: flex; align-items: center; gap: 16px;
+        }
+        .header-icon {
+            width: 52px; height: 52px; flex-shrink: 0;
+            background: #eff6ff; color: var(--blue);
+            border-radius: 14px; display: flex;
+            align-items: center; justify-content: center;
+            font-size: 1.4rem;
+        }
+        .header h1 { margin: 0 0 4px 0; font-size: 1.2rem; font-weight: 900; }
+        .header p  { margin: 0; color: var(--slate); font-size: 0.88rem; font-weight: 600; }
+
+        /* ── Group cards ── */
+        .group-card {
+            background: var(--white);
+            padding: 20px; border-radius: var(--radius);
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+            position: relative; overflow: hidden;
+            transition: box-shadow 0.2s;
+        }
+        .group-card::before {
+            content: '';
+            position: absolute; top: 0; right: 0;
+            width: 4px; height: 100%;
+            background: var(--blue);
+        }
+        .group-card:hover { box-shadow: 0 6px 20px rgba(37,99,235,0.10); }
+
+        .group-info {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid var(--bg);
+            padding-bottom: 12px; margin-bottom: 14px;
+        }
+        .group-info h3 { margin: 0; font-weight: 900; font-size: 1.05rem; }
+        .group-meta {
+            display: flex; gap: 8px; align-items: center;
+            flex-wrap: wrap;
+        }
+        .meta-badge {
+            background: #eff6ff; color: var(--blue);
+            padding: 4px 12px; border-radius: 20px;
+            font-size: 0.78rem; font-weight: 700;
+            font-variant-numeric: lining-nums;
+            border: 1px solid #dbeafe;
+        }
+
+        /* ── Table ── */
+        .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #e2e8f0; }
+        table {
+            width: 100%; border-collapse: collapse;
+            font-size: 0.88rem; min-width: 360px;
+        }
+        th, td {
+            border-bottom: 1px solid #f1f5f9;
+            padding: 10px 8px; text-align: center;
+        }
+        th {
+            background: #f8fafc; color: var(--slate);
+            font-weight: 700; font-size: 0.8rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafbff; }
+        td:first-child { font-weight: 700; text-align: right; padding-right: 14px; }
+
+        /* حالة الحضور */
+        .status-present   { color: var(--green); font-weight: 800; }
+        .status-absent    { color: var(--red);   font-weight: 800; }
+        .status-absent-free { color: var(--orange); font-weight: 800; }
+        .status-dash      { color: #cbd5e1; font-weight: 700; }
+
+        /* دين */
+        .debt-ok   { color: var(--green); font-weight: 700; }
+        .debt-bad  {
+            color: var(--red); font-weight: 700;
+            font-variant-numeric: lining-nums;
+        }
+
+        /* زر التصدير */
+        .btn-export {
+            background: var(--blue); color: white;
+            border: none; padding: 13px 25px;
+            border-radius: 12px; cursor: pointer;
+            font-weight: 800; width: 100%;
+            display: flex; align-items: center;
+            justify-content: center; gap: 10px;
+            margin-top: 14px; font-family: 'Cairo', inherit;
+            font-size: 0.97rem;
+            transition: background 0.15s, transform 0.1s;
+        }
+        .btn-export:hover  { background: #1d4ed8; }
+        .btn-export:active { transform: scale(0.98); }
+
+        /* no data */
+        .no-data {
+            text-align: center; padding: 50px 20px;
+            color: var(--slate);
+        }
+        .no-data .icon { font-size: 2.8rem; opacity: 0.4; margin-bottom: 12px; }
+        .no-data p { font-size: 1rem; font-weight: 600; margin: 0; }
+
+        /* loading */
+        .loading {
+            text-align: center; padding: 40px;
+            color: var(--slate); font-weight: 700;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
+
     <div class="header">
-        <h1><i class="fas fa-file-invoice"></i> مركز استخراج التقارير</h1>
-        <p>اختر الفوج لتوليد وثيقة PDF رسمية</p>
+        <div class="header-icon"><i class="fas fa-file-invoice"></i></div>
+        <div>
+            <h1>مركز استخراج التقارير</h1>
+            <p>اختر الفوج لتوليد وثيقة PDF رسمية</p>
+        </div>
     </div>
 
     <div id="reports-list">
-        <div class="no-data">جاري تحميل البيانات من قاعدة البيانات...</div>
+        <div class="loading"><i class="fas fa-circle-notch fa-spin" style="margin-left:8px;"></i> جاري تحميل البيانات...</div>
     </div>
 </div>
 
 <script>
-    const DB_NAME = "kanashi_db";
-    const DB_VERSION = 2;
+    // ── قسر الأرقام لاتينية ──
+    function lat(val) {
+        return String(val).replace(/[٠١٢٣٤٥٦٧٨٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+    }
 
-    // فتح قاعدة البيانات المشتركة مع التطبيق الأصلي
+    const DB_NAME = "kanashi_db", DB_VERSION = 2;
+
     function openDB() {
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
             const req = indexedDB.open(DB_NAME, DB_VERSION);
-            req.onsuccess = (e) => resolve(e.target.result);
+            req.onsuccess = e => resolve(e.target.result);
         });
     }
 
     async function loadReports() {
         const db = await openDB();
         const tx = db.transaction(["students", "groups"], "readonly");
-        const students = await new Promise(r => tx.objectStore("students").getAll().onsuccess = (e) => r(e.target.result));
-        const groups = await new Promise(r => tx.objectStore("groups").getAll().onsuccess = (e) => r(e.target.result));
+        const students = await new Promise(r => tx.objectStore("students").getAll().onsuccess = e => r(e.target.result));
+        const groups   = await new Promise(r => tx.objectStore("groups").getAll().onsuccess   = e => r(e.target.result));
 
         const container = document.getElementById("reports-list");
         container.innerHTML = "";
 
         if (groups.length === 0) {
-            container.innerHTML = '<div class="no-data">لا توجد أفواج مسجلة حالياً.</div>';
+            container.innerHTML = `<div class="no-data"><div class="icon">📂</div><p>لا توجد أفواج مسجلة حالياً.</p></div>`;
             return;
         }
 
         groups.forEach(g => {
             const gSt = students.filter(s => s.group === g.name);
+            const maxSess = g.sessionsCount || 4;
             const groupDiv = document.createElement("div");
             groupDiv.className = "group-card";
 
-            let tableHTML = `
+            // رؤوس الحصص
+            const sessionHeaders = Array.from({length: maxSess}, (_, i) =>
+                `<th>ح${lat(i+1)}</th>`
+            ).join('');
+
+            // صفوف التلاميذ
+            const rows = gSt.map(s => {
+                const sessionCells = Array.from({length: maxSess}, (_, i) => {
+                    const status = (s.attendance && s.attendance[i]) || "";
+                    if (status === 'present')     return `<td><span class="status-present">ح</span></td>`;
+                    if (status === 'absent')      return `<td><span class="status-absent">غ</span></td>`;
+                    if (status === 'absent-free') return `<td><span class="status-absent-free">غ°</span></td>`;
+                    return `<td><span class="status-dash">—</span></td>`;
+                }).join('');
+
+                const debtVal = Number(s.debt || 0);
+                const debtCell = debtVal > 0
+                    ? `<td class="debt-bad">${lat(debtVal)} دج</td>`
+                    : `<td class="debt-ok">خالص</td>`;
+
+                return `<tr><td>${s.name}</td>${sessionCells}${debtCell}</tr>`;
+            }).join('') || `<tr><td colspan="${maxSess + 2}" style="color:var(--slate); padding:18px;">لا تلاميذ في هذا الفوج</td></tr>`;
+
+            groupDiv.innerHTML = `
                 <div class="group-info">
-                    <h3>فوج: ${g.name}</h3>
-                    <span>عدد التلاميذ: ${gSt.length}</span>
+                    <h3>📖 ${g.name}</h3>
+                    <div class="group-meta">
+                        <span class="meta-badge">👥 ${lat(gSt.length)} تلميذ</span>
+                        <span class="meta-badge">${lat(maxSess)} حصص</span>
+                    </div>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>التلميذ</th>
-                            ${Array.from({length: g.sessionsCount || 4}, (_, i) => `<th>ح${i+1}</th>`).join('')}
-                            <th>الدين</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${gSt.map(s => `
+                <div class="table-wrap">
+                    <table>
+                        <thead>
                             <tr>
-                                <td>${s.name}</td>
-                                ${Array.from({length: g.sessionsCount || 4}, (_, i) => {
-                                    const status = s.attendance[i] || "-";
-                                    return `<td><span class="status-${status}">${status === 'present' ? 'ح' : status === 'absent' ? 'غ' : '-'}</span></td>`;
-                                }).join('')}
-                                <td>${s.debt || 0} دج</td>
+                                <th style="text-align:right; padding-right:14px;">التلميذ</th>
+                                ${sessionHeaders}
+                                <th>الدفع</th>
                             </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
                 <button class="btn-export" onclick='sendToExternalSite(${JSON.stringify(g)}, ${JSON.stringify(gSt)})'>
                     <i class="fas fa-paper-plane"></i> إرسال للمستخرج وطباعة PDF
                 </button>
             `;
-            groupDiv.innerHTML = tableHTML;
             container.appendChild(groupDiv);
         });
     }
 
     function sendToExternalSite(group, students) {
+        const maxSess = group.sessionsCount || 4;
         const reportData = {
             "التقرير": `سجل الحضور الشهري - فوج ${group.name}`,
             "التاريخ": new Date().toLocaleDateString('ar-DZ'),
             "بيانات_الجدول": students.map(s => {
                 let row = { "الاسم": s.name };
-                for (let i = 0; i < (group.sessionsCount || 4); i++) {
-                    let st = s.attendance[i];
-                    row[`حصة ${i+1}`] = st === 'present' ? 'حاضر' : st === 'absent' ? 'غائب' : '-';
+                for (let i = 0; i < maxSess; i++) {
+                    const st = s.attendance && s.attendance[i];
+                    row[`حصة ${i+1}`] = st === 'present' ? 'حاضر' : st === 'absent' ? 'غائب' : st === 'absent-free' ? 'غائب°' : '-';
                 }
-                row["حالة الدفع"] = (Number(s.debt) > 0) ? `دين: ${s.debt}` : "خالص";
+                row["حالة الدفع"] = Number(s.debt) > 0 ? `دين: ${s.debt}` : "خالص";
                 return row;
             })
         };
 
-        // تشفير البيانات لإرسالها عبر الرابط
         try {
-            const jsonStr = JSON.stringify(reportData);
-            const bytes = new TextEncoder().encode(jsonStr);
+            const jsonStr   = JSON.stringify(reportData);
+            const bytes     = new TextEncoder().encode(jsonStr);
             let binary = "";
             bytes.forEach(b => binary += String.fromCharCode(b));
             const encodedData = btoa(binary);
-
-            const targetUrl = `https://abdovvip2.github.io/Moja/?data=${encodedData}`;
-            window.open(targetUrl, '_blank');
+            window.open(`https://abdovvip2.github.io/Moja/?data=${encodedData}`, '_blank');
         } catch (e) {
             alert("فشل تشفير البيانات. تأكد من حجم البيانات.");
         }
@@ -142,6 +276,5 @@
 
     window.onload = loadReports;
 </script>
-
 </body>
 </html>
