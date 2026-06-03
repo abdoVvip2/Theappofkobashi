@@ -177,6 +177,18 @@
         }
         .btn-close-arch:hover { background: #e2e8f0; }
 
+        /* معلومات التلميذ */
+        .arch-info-item {
+            padding: 11px 10px; text-align: center;
+            border-left: 1px solid #f1f5f9;
+        }
+        .arch-info-item:last-child { border-left: none; }
+        .arch-info-item small {
+            display: block; font-size: 0.7rem;
+            color: var(--slate); font-weight: 700; margin-bottom: 3px;
+        }
+        .arch-info-item b { font-size: 0.85rem; font-weight: 800; }
+
         /* بطاقة ملخص */
         .arch-summary {
             display: grid; grid-template-columns: 1fr 1fr 1fr;
@@ -315,7 +327,10 @@
             <button class="btn-close-arch" onclick="closeArchive()">✕</button>
         </div>
 
-        <!-- ملخص سريع -->
+        <!-- معلومات التلميذ -->
+        <div class="arch-info-row" id="arch-info-row" style="display:grid; grid-template-columns:1fr 1fr 1fr; border-bottom:1px solid #f1f5f9;"></div>
+
+        <!-- ملخص مالي -->
         <div class="arch-summary">
             <div class="arch-summary-item">
                 <small>إجمالي الدفع</small>
@@ -479,32 +494,19 @@ async function removeStudent(id) {
 //  الأرشيف الحقيقي
 // ══════════════════════════════════════════════
 
-/*
-  بنية الدورة المخزّنة في s.cycles[] :
-  {
-    cycleNum   : 1,
-    maxSessions: 4 | 8,
-    paymentMode: "cash" | "debt",
-    paidAmount : number,         // ما دُفع في هذه الدورة
-    debtAmount : number,         // الدين المتبقي من هذه الدورة
-    sessions   : [               // مصفوفة بحجم maxSessions
-      { status: "present"|"absent"|"absent-free"|"", date: "12/5", pay: "cash"|"debt"|"free" }
-    ],
-    completedAt: timestamp | null
-  }
+// تنسيق التاريخ
+function fmtDate(ts) {
+    if (!ts) return "—";
+    return new Date(ts).toLocaleDateString('ar-DZ', { year:'numeric', month:'short', day:'numeric' });
+}
 
-  الدورة الحالية تُقرأ من s.attendance / s.dates / s.paymentMode مباشرة.
-  عند الـ renewal يُضاف سجل الدورة المكتملة إلى s.cycles[].
-  نظرًا لعدم وجود hook في ملف الحضور، نستخرج الدورة الحالية هنا من البيانات الخام.
-*/
-
+// بناء الدورة الحالية من بيانات s الخام
 function buildCurrentCycle(s, groupMaxSessions) {
     const max  = groupMaxSessions || 4;
     const att  = s.attendance || [];
     const dt   = s.dates || [];
     const mode = s.paymentMode || null;
 
-    // كل الحصص فارغة = لم تبدأ دورة
     const started = att.some(v => v !== "" && v !== undefined);
     if (!started) return null;
 
@@ -516,40 +518,39 @@ function buildCurrentCycle(s, groupMaxSessions) {
         return { status: st, date: dt[i] || "", pay };
     });
 
-    const sessionsCompleted = sessions.filter(s => s.status !== "").length;
-    const paidPerSession = s.paidAmount_current || 0;
-
     return {
-        cycleNum:    (s.cycles ? s.cycles.length : 0) + 1,
+        cycleNum:    999,   // سيُعدَّل في openArchive
         maxSessions: max,
         paymentMode: mode,
-        paidAmount:  mode === "cash" ? (s.groupPrice || 0) : 0,
+        paidAmount:  mode === "cash" ? Number(s.groupPrice || 0) : 0,
         debtAmount:  mode === "debt" ? Number(s.debt || 0) : 0,
         sessions,
-        sessionsCompleted,
-        isCurrent: true
+        startDate:   s.cycleStartDate || null,
+        completedAt: null,
+        isCurrent:   true
     };
 }
 
 function getCycleBadge(cycle) {
     if (!cycle.paymentMode) return { cls: "badge-free", txt: "غير محدد" };
-
-    if (cycle.paymentMode === "cash") {
-        return { cls: "badge-paid", txt: "دفع مسبق ✓" };
-    }
-
-    // debt
-    if (cycle.debtAmount > 0) {
-        return { cls: "badge-debt", txt: `دين: ${fmtMoney(cycle.debtAmount)}` };
-    }
-    return { cls: "badge-paid", txt: "تسوية ✓" };
+    if (cycle.paymentMode === "cash") return { cls: "badge-paid", txt: "✓ دفع مسبق" };
+    if (cycle.debtAmount > 0)         return { cls: "badge-debt", txt: `دين: ${fmtMoney(cycle.debtAmount)}` };
+    return { cls: "badge-paid", txt: "✓ تسوية" };
 }
 
-function renderCycleCard(cycle, idx) {
+function renderCycleCard(cycle) {
     const badge = getCycleBadge(cycle);
-    const label = cycle.isCurrent ? `الدورة ${lat(cycle.cycleNum)} (الحالية)` : `الدورة ${lat(cycle.cycleNum)}`;
+    let label = `الدورة ${lat(cycle.cycleNum)}`;
+    if (cycle.isCurrent) {
+        label += ` <span style="font-size:0.72rem;color:var(--blue);background:#eff6ff;padding:2px 8px;border-radius:10px;margin-right:6px;">الحالية</span>`;
+    } else if (cycle.migrated) {
+        label += ` <span style="font-size:0.72rem;color:var(--slate);background:#f1f5f9;padding:2px 8px;border-radius:10px;margin-right:6px;">مُسترجَعة</span>`;
+    }
 
-    // صناديق الحصص
+    // تواريخ الدورة
+    const startStr = cycle.startDate ? fmtDate(cycle.startDate) : "—";
+    const endStr   = cycle.completedAt ? fmtDate(cycle.completedAt) : (cycle.isCurrent ? "جارية" : "—");
+
     const boxes = cycle.sessions.map((sess, i) => {
         let boxCls = "empty";
         if (sess.status === "present")     boxCls = "present";
@@ -558,27 +559,26 @@ function renderCycleCard(cycle, idx) {
 
         let payLbl = "", payCls = "";
         if (sess.status !== "") {
-            if (sess.pay === "cash")  { payLbl = "نقد"; payCls = "cash"; }
-            if (sess.pay === "debt")  { payLbl = "دين"; payCls = "debt"; }
-            if (sess.pay === "free")  { payLbl = "مجاني"; payCls = "free"; }
+            if (sess.pay === "cash")  { payLbl = "نقد";    payCls = "cash"; }
+            if (sess.pay === "debt")  { payLbl = "دين";    payCls = "debt"; }
+            if (sess.pay === "free")  { payLbl = "مجاني";  payCls = "free"; }
         }
 
         return `
         <div class="sess-item">
             <div class="sess-box ${boxCls}">${lat(i+1)}</div>
-            ${sess.date ? `<div class="sess-date">${lat(sess.date)}</div>` : '<div class="sess-date"></div>'}
+            <div class="sess-date">${sess.date ? lat(sess.date) : ''}</div>
             ${payLbl ? `<div class="sess-pay ${payCls}">${payLbl}</div>` : '<div class="sess-pay"></div>'}
         </div>`;
     }).join("");
 
-    // ملخص داخل الدورة
-    const totalPresent     = cycle.sessions.filter(s => s.status === "present").length;
-    const totalAbsent      = cycle.sessions.filter(s => s.status === "absent").length;
-    const totalAbsentFree  = cycle.sessions.filter(s => s.status === "absent-free").length;
+    const totalPresent    = cycle.sessions.filter(x => x.status === "present").length;
+    const totalAbsent     = cycle.sessions.filter(x => x.status === "absent").length;
+    const totalAbsentFree = cycle.sessions.filter(x => x.status === "absent-free").length;
     const summaryParts = [];
-    if (totalPresent    > 0) summaryParts.push(`<span style="color:var(--green);font-weight:700;">${lat(totalPresent)} حضور</span>`);
-    if (totalAbsent     > 0) summaryParts.push(`<span style="color:var(--red);font-weight:700;">${lat(totalAbsent)} غياب</span>`);
-    if (totalAbsentFree > 0) summaryParts.push(`<span style="color:var(--orange);font-weight:700;">${lat(totalAbsentFree)} غ°</span>`);
+    if (totalPresent    > 0) summaryParts.push(`<span style="color:var(--green);font-weight:700;">✓ ${lat(totalPresent)} حضور</span>`);
+    if (totalAbsent     > 0) summaryParts.push(`<span style="color:var(--red);font-weight:700;">✗ ${lat(totalAbsent)} غياب</span>`);
+    if (totalAbsentFree > 0) summaryParts.push(`<span style="color:var(--orange);font-weight:700;">○ ${lat(totalAbsentFree)} غ°</span>`);
 
     return `
     <div class="cycle-card">
@@ -586,8 +586,12 @@ function renderCycleCard(cycle, idx) {
             <span>${label}</span>
             <span class="cycle-badge ${badge.cls}">${badge.txt}</span>
         </div>
+        <div style="padding:6px 14px 8px; display:flex; gap:16px; font-size:0.76rem; color:var(--slate); flex-wrap:wrap; border-bottom:1px solid #f1f5f9;">
+            <span>📅 بداية: <b style="color:var(--dark);">${startStr}</b></span>
+            <span>📅 نهاية: <b style="color:var(--dark);">${endStr}</b></span>
+        </div>
         <div class="sessions-grid">${boxes}</div>
-        ${summaryParts.length ? `<div style="padding: 0 14px 10px; font-size:0.82rem; display:flex; gap:12px; flex-wrap:wrap;">${summaryParts.join('')}</div>` : ''}
+        ${summaryParts.length ? `<div style="padding:0 14px 10px; font-size:0.82rem; display:flex; gap:14px; flex-wrap:wrap;">${summaryParts.join('')}</div>` : ''}
     </div>`;
 }
 
@@ -595,44 +599,67 @@ async function openArchive(id) {
     const s = await getStudent(id);
     if (!s) return;
 
-    // جلب الفوج لمعرفة maxSessions
-    let maxSessions = 4;
+    // جلب الفوج
+    let maxSessions = 4, groupPrice = 0;
     try {
         const tx = db.transaction(STORE_GROUPS, "readonly");
         const groups = await new Promise(res => tx.objectStore(STORE_GROUPS).getAll().onsuccess = e => res(e.target.result));
         const g = groups.find(g => g.name === s.group);
-        if (g && g.sessionsCount) maxSessions = g.sessionsCount;
+        if (g) {
+            if (g.sessionsCount) maxSessions = g.sessionsCount;
+            if (g.price)         groupPrice  = Number(g.price);
+        }
     } catch(e) {}
 
+    // ── ملء الملخص العلوي ──
     document.getElementById("arch-student-name").innerText = s.name;
-    document.getElementById("arch-paid").innerText = fmtMoney(s.paid);
 
+    // معلومات التلميذ
+    const regDate  = s.registeredAt   ? fmtDate(s.registeredAt)   : "—";
+    const startDate= s.cycleStartDate ? fmtDate(s.cycleStartDate) : (s.registeredAt ? fmtDate(s.registeredAt) : "—");
+    document.getElementById("arch-info-row").innerHTML = `
+        <div class="arch-info-item"><small>الفوج</small><b>${s.group || "—"}</b></div>
+        <div class="arch-info-item"><small>تاريخ التسجيل</small><b>${regDate}</b></div>
+        <div class="arch-info-item"><small>رقم الهاتف</small><b>${s.phone || "—"}</b></div>
+    `;
+
+    document.getElementById("arch-paid").innerText = fmtMoney(s.paid);
     const debtEl = document.getElementById("arch-debt");
     debtEl.innerText = fmtMoney(s.debt);
     debtEl.style.color = Number(s.debt || 0) > 0 ? "var(--red)" : "var(--green)";
 
-    // جمع كل الدورات
+    // ══ بناء قائمة الدورات ══
+
+    // الدورات المكتملة المحفوظة في cycles[]
+    const savedCycles = (s.cycles && s.cycles.length > 0) ? s.cycles : [];
+
+    // الدورة الحالية: attendance فيها على الأقل حصة مسجلة
+    const curAtt = s.attendance || [];
+    const curHasData = curAtt.some(v => v !== "" && v !== undefined && v !== null);
+
+    // نبني الدورة الحالية دائماً إذا فيها بيانات
+    const currentCycle = curHasData ? buildCurrentCycle(s, maxSessions) : null;
+
+    // الكل مجموع بالترتيب الزمني
     const allCycles = [];
 
-    // الدورات المحفوظة (المكتملة)
-    if (s.cycles && s.cycles.length > 0) {
-        s.cycles.forEach((c, i) => {
-            allCycles.push({
-                cycleNum: i + 1,
-                maxSessions: c.maxSessions || maxSessions,
-                paymentMode: c.paymentMode,
-                paidAmount: c.paidAmount || 0,
-                debtAmount: c.debtAmount || 0,
-                sessions: c.sessions || [],
-                isCurrent: false
-            });
+    savedCycles.forEach((c, i) => {
+        allCycles.push({
+            cycleNum:    i + 1,
+            maxSessions: c.maxSessions || maxSessions,
+            paymentMode: c.paymentMode,
+            paidAmount:  c.paidAmount  || 0,
+            debtAmount:  c.debtAmount  || 0,
+            sessions:    c.sessions    || [],
+            startDate:   c.startDate   || null,
+            completedAt: c.completedAt || null,
+            isCurrent:   false
         });
-    }
+    });
 
-    // الدورة الحالية من attendance/dates
-    const currentCycle = buildCurrentCycle(s, maxSessions);
     if (currentCycle) {
-        currentCycle.cycleNum = allCycles.length + 1;
+        currentCycle.cycleNum  = allCycles.length + 1;
+        currentCycle.startDate = s.cycleStartDate || null;
         allCycles.push(currentCycle);
     }
 
@@ -643,16 +670,14 @@ async function openArchive(id) {
     if (allCycles.length === 0) {
         body.innerHTML = `<div class="arch-empty"><i class="fas fa-history"></i><p>لم تبدأ أي دورة بعد</p></div>`;
     } else {
-        // عرض من الأحدث للأقدم
-        const reversed = [...allCycles].reverse();
-        body.innerHTML = reversed.map((c, i) => renderCycleCard(c, i)).join("");
+        body.innerHTML = [...allCycles].reverse().map(c => renderCycleCard(c)).join("");
     }
 
-    // سجل الدفعات إن وجد
+    // سجل الدفعات
     if (s.history && s.history.length > 0) {
         const payHTML = [...s.history].reverse().map(h => `
             <div class="pay-entry">
-                <span style="color:var(--slate); font-size:0.82rem;">${new Date(h.date).toLocaleDateString('ar-DZ')} — ${h.note || 'دفعة نقدية'}</span>
+                <span style="color:var(--slate);font-size:0.82rem;">${fmtDate(h.date)} — ${h.note || 'دفعة نقدية'}</span>
                 <span class="pay-amount">+${fmtMoney(h.amount)}</span>
             </div>`).join("");
         body.innerHTML += `
