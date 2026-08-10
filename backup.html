@@ -124,6 +124,53 @@
   }
   .warning-box .ic{ font-size:1.2rem; flex-shrink:0; }
 
+  .info-box{
+    background:var(--blue-pale);
+    color:var(--blue-dark);
+    border-radius:var(--radius-md);
+    padding:14px 16px;
+    font-size:0.82rem;
+    font-weight:600;
+    line-height:1.7;
+    display:none;
+    gap:10px;
+    margin-top:14px;
+  }
+  .info-box.show{ display:flex; }
+  .info-box .ic{ font-size:1.2rem; flex-shrink:0; }
+
+  .link-row{
+    display:none;
+    gap:8px;
+    margin-top:12px;
+  }
+  .link-row.show{ display:flex; }
+  .link-row input{
+    flex:1;
+    min-width:0;
+    padding:12px;
+    border-radius:var(--radius-sm);
+    border:1.5px solid var(--blue-light);
+    background:var(--blue-pale);
+    color:var(--blue-dark);
+    font-family:'Tajawal', sans-serif;
+    font-size:0.75rem;
+    font-weight:600;
+  }
+  .copy-btn{
+    flex-shrink:0;
+    background:var(--blue);
+    color:#fff;
+    border:none;
+    border-radius:var(--radius-sm);
+    padding:0 16px;
+    font-family:'Tajawal', sans-serif;
+    font-weight:800;
+    font-size:0.85rem;
+    cursor:pointer;
+  }
+  .copy-btn.copied{ background:var(--mint-ink); }
+
   .file-chip{
     background:var(--blue-pale);
     color:var(--blue-dark);
@@ -154,96 +201,222 @@
     transition:opacity 0.25s, bottom 0.25s;
     z-index:50;
     white-space:nowrap;
+    max-width:90%;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
   .toast.show{ opacity:1; bottom:34px; }
   .toast.err{ background:var(--pink-ink); }
+
+  /* ==== وضع صفحة استقبال التحميل (لما الرابط فيه #data=) ==== */
+  #receiveMode{
+    display:none;
+    min-height:80vh;
+    align-items:center;
+    justify-content:center;
+  }
+  #receiveMode.show{ display:flex; }
+  #normalMode.hide{ display:none; }
+  .receive-card{
+    background:var(--card-bg);
+    border-radius:var(--radius-lg);
+    padding:32px 26px;
+    box-shadow:var(--shadow);
+    border-inline-end:6px solid var(--blue);
+    max-width:420px;
+    width:100%;
+    text-align:center;
+  }
+  .receive-card .icon{ font-size:2.6rem; margin-bottom:12px; }
+  .receive-card h1{ font-size:1.2rem; margin:0 0 8px; font-weight:900; }
+  .receive-card p{ color:var(--muted); font-size:0.88rem; line-height:1.8; margin:0 0 22px; font-weight:500; }
+  .status-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 16px; border-radius:999px; font-size:0.78rem; font-weight:700;
+    margin-bottom:14px; background:var(--blue-light); color:var(--blue-dark);
+  }
+  .status-badge.ok{ background:var(--mint); color:var(--mint-ink); }
+  .status-badge.err{ background:var(--pink); color:var(--pink-ink); }
+  .err-title{ color:var(--pink-ink); }
 </style>
 </head>
 <body>
 
-  <div class="header-card">
-    <span class="icon">⚙️</span>
-    <div>
-      <h1>النسخ الاحتياطي والاستعادة</h1>
-      <p>احفظ بياناتك أو رجّعها في أي وقت</p>
+  <!-- ============ وضع الاستقبال: يظهر فقط لما الرابط فيه #data= ============ -->
+  <div id="receiveMode">
+    <div class="receive-card">
+      <div class="icon" id="cardIcon">💾</div>
+      <div class="status-badge" id="statusBadge">جاري التجهيز</div>
+      <h1 id="rTitle">جاري تجهيز نسختك الاحتياطية...</h1>
+      <p id="rDesc">إذا ما بدأ التحميل تلقائيًا خلال ثوانٍ، اضغط الزر تحت.</p>
+      <button class="main-btn blue" id="dlBtn" onclick="doDownload()">⬇️ تحميل الملف الآن</button>
     </div>
   </div>
 
-  <div class="stats-card">
-    <div class="stats-title">📊 نظرة عامة</div>
-    <div class="stats-row">
-      <div class="stat-box">
-        <div class="num" id="itemCount">0</div>
-        <div class="label">عنصر محفوظ حاليًا</div>
+  <!-- ============ الوضع العادي: صفحة الإعدادات كاملة ============ -->
+  <div id="normalMode">
+
+    <div class="header-card">
+      <span class="icon">⚙️</span>
+      <div>
+        <h1>النسخ الاحتياطي والاستعادة</h1>
+        <p>احفظ بياناتك أو رجّعها في أي وقت</p>
       </div>
-      <div class="stat-box">
-        <div class="num" id="lastBackup">—</div>
-        <div class="label">آخر نسخة احتياطية</div>
+    </div>
+
+    <div class="stats-card">
+      <div class="stats-title">📊 نظرة عامة</div>
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="num" id="itemCount">0</div>
+          <div class="label">عنصر محفوظ حاليًا</div>
+        </div>
+        <div class="stat-box">
+          <div class="num" id="lastBackup">—</div>
+          <div class="label">آخر نسخة احتياطية</div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- تحميل (Backup) -->
-  <div class="section-card">
-    <div class="section-top">
-      <div class="badge">تحميل</div>
-      <div class="section-title">💾 حفظ نسخة</div>
-    </div>
-    <div class="section-desc">
-      يحفظ هذا الخيار كل بياناتك الحالية في ملف واحد على جهازك، تقدر ترجع له لاحقًا أو تنقله لجهاز ثاني.
-    </div>
-    <button class="main-btn blue" onclick="downloadBackup()">
-      ⬇️ تحميل نسخة احتياطية
-    </button>
-  </div>
+    <!-- تحميل (Backup) -->
+    <div class="section-card">
+      <div class="section-top">
+        <div class="badge">تحميل</div>
+        <div class="section-title">💾 حفظ نسخة</div>
+      </div>
+      <div class="section-desc">
+        يحفظ هذا الخيار كل بياناتك الحالية في ملف واحد، تقدر ترجع له لاحقًا أو تنقله لجهاز ثاني.
+        بيتم فتح صفحة التحميل في متصفحك.
+      </div>
+      <button class="main-btn blue" onclick="downloadBackup()">
+        ⬇️ تحميل نسخة احتياطية
+      </button>
 
-  <!-- رفع (Restore) -->
-  <div class="section-card upload">
-    <div class="section-top">
-      <div class="badge warn">استعادة</div>
-      <div class="section-title">📤 رفع نسخة سابقة</div>
-    </div>
-    <div class="section-desc">
-      ارفع ملف نسخة احتياطية سبق وحمّلته، وبيانات التطبيق الحالية بترجع كما كانت وقت الحفظ.
-    </div>
-
-    <div class="warning-box">
-      <span class="ic">⚠️</span>
-      <span>تنبيه: رفع نسخة جديدة بيستبدل كل البيانات الموجودة حاليًا في التطبيق، وما ينرجع الوضع اللي قبله. تأكد إنك تحمّل نسخة حديثة قبل ما تكمل.</span>
+      <div class="info-box" id="openInfo">
+        <span class="ic">ℹ️</span>
+        <span>إذا ما انفتح المتصفح تلقائيًا، انسخ الرابط تحت وافتحه يدويًا في متصفحك (كروم / سفاري).</span>
+      </div>
+      <div class="link-row" id="linkRow">
+        <input type="text" id="linkInput" readonly>
+        <button class="copy-btn" id="copyBtn" onclick="copyLink()">نسخ</button>
+      </div>
     </div>
 
-    <div class="file-chip" id="fileChip">
-      <span id="fileChipName">—</span>
-      <span>📄</span>
+    <!-- رفع (Restore) -->
+    <div class="section-card upload">
+      <div class="section-top">
+        <div class="badge warn">استعادة</div>
+        <div class="section-title">📤 رفع نسخة سابقة</div>
+      </div>
+      <div class="section-desc">
+        ارفع ملف نسخة احتياطية سبق وحمّلته، وبيانات التطبيق الحالية بترجع كما كانت وقت الحفظ.
+      </div>
+
+      <div class="warning-box">
+        <span class="ic">⚠️</span>
+        <span>تنبيه: رفع نسخة جديدة بيستبدل كل البيانات الموجودة حاليًا في التطبيق، وما ينرجع الوضع اللي قبله. تأكد إنك تحمّل نسخة حديثة قبل ما تكمل.</span>
+      </div>
+
+      <div class="file-chip" id="fileChip">
+        <span id="fileChipName">—</span>
+        <span>📄</span>
+      </div>
+
+      <input type="file" id="fileInput" accept=".json" onchange="fileSelected(event)">
+      <button class="main-btn orange" onclick="document.getElementById('fileInput').click()">
+        📁 اختيار ملف الاستعادة
+      </button>
     </div>
 
-    <input type="file" id="fileInput" accept=".json" onchange="fileSelected(event)">
-    <button class="main-btn orange" onclick="document.getElementById('fileInput').click()">
-      📁 اختيار ملف الاستعادة
-    </button>
   </div>
 
   <div class="toast" id="toast"></div>
 
 <script>
-/* ==== إعداد داخلي (Storage layer) - المستخدم ما يشوف هذي المصطلحات في الواجهة ==== */
-const DB_NAME = "AppDataBackupDB";
-const STORE_NAME = "backup";
+/* رابط هذي الصفحة نفسها على السيرفر (تُستخدم كوجهة التحميل من داخل التطبيق) */
+const BACKUP_PAGE_URL = "https://theappofkobashi.vercel.app/backup.html";
 
-function openDB(){
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if(!db.objectStoreNames.contains(STORE_NAME)){
-        db.createObjectStore(STORE_NAME);
-      }
-    };
-    req.onsuccess = (e) => resolve(e.target.result);
-    req.onerror = (e) => reject(e.target.error);
+/* ============================================================
+   الخطوة الأولى: تحديد أي وضع نشتغل فيه
+   - إذا الرابط فيه #data=  → وضع الاستقبال (تحميل تلقائي)
+   - غير هيك               → وضع الإعدادات العادي
+   ============================================================ */
+function getDataFromHash(){
+  const hash = window.location.hash;
+  const match = hash.match(/data=([^&]+)/);
+  if(!match) return null;
+  try{
+    const decoded = decodeURIComponent(escape(atob(decodeURIComponent(match[1]))));
+    return JSON.parse(decoded);
+  }catch(e){
+    return null;
+  }
+}
+
+const incomingData = getDataFromHash();
+
+if(incomingData !== null){
+  document.getElementById("receiveMode").classList.add("show");
+  document.getElementById("normalMode").classList.add("hide");
+}
+
+/* ==== منطق وضع الاستقبال (تنزيل الملف الفعلي) ==== */
+function setReceiveState(state){
+  const icon  = document.getElementById("cardIcon");
+  const badge = document.getElementById("statusBadge");
+  const title = document.getElementById("rTitle");
+  const desc  = document.getElementById("rDesc");
+  const btn   = document.getElementById("dlBtn");
+
+  if(state === "success"){
+    icon.textContent = "✅";
+    badge.textContent = "تم بنجاح";
+    badge.className = "status-badge ok";
+    title.textContent = "تم تجهيز ملفك بنجاح";
+    desc.textContent = "تم بدء التحميل تلقائيًا. تقدر تغلق هذي الصفحة الآن، أو تضغط الزر لإعادة التحميل.";
+    btn.textContent = "⬇️ إعادة التحميل";
+  }else if(state === "error"){
+    icon.textContent = "⚠️";
+    badge.textContent = "تعذر التحميل";
+    badge.className = "status-badge err";
+    title.textContent = "الرابط غير صالح";
+    title.classList.add("err-title");
+    desc.textContent = "لم نتمكن من قراءة بيانات النسخة الاحتياطية من الرابط. ارجع للتطبيق وحاول تحميل النسخة من جديد.";
+    btn.style.display = "none";
+  }
+}
+
+function doDownload(){
+  if(!incomingData){
+    setReceiveState("error");
+    return;
+  }
+  const blob = new Blob([JSON.stringify(incomingData, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `نسخة-احتياطية-${Date.now()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+  setReceiveState("success");
+}
+
+if(incomingData !== null){
+  window.addEventListener("load", () => {
+    if(incomingData){
+      doDownload();
+    }else{
+      setReceiveState("error");
+    }
   });
 }
 
+/* ============================================================
+   منطق وضع الإعدادات العادي (يشتغل فقط لو ما فيه #data=)
+   ============================================================ */
 function showToast(msg, isErr){
   const t = document.getElementById("toast");
   t.textContent = msg;
@@ -251,13 +424,19 @@ function showToast(msg, isErr){
   setTimeout(() => { t.className = "toast" + (isErr ? " err" : ""); }, 2600);
 }
 
-async function refreshStats(){
-  document.getElementById("itemCount").textContent = window.localStorage.length;
+function refreshStats(){
+  const itemCountEl = document.getElementById("itemCount");
+  const lastBackupEl = document.getElementById("lastBackup");
+  if(!itemCountEl || !lastBackupEl) return;
+  itemCountEl.textContent = window.localStorage.length;
   const saved = window.localStorage.getItem("__lastBackupDate__");
-  document.getElementById("lastBackup").textContent = saved ? saved : "—";
+  lastBackupEl.textContent = saved ? saved : "—";
 }
 
-/* ==== تحميل نسخة ==== */
+function toBase64Unicode(str){
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
 function downloadBackup(){
   const obj = {};
   for(let i=0; i<window.localStorage.length; i++){
@@ -270,21 +449,65 @@ function downloadBackup(){
     return;
   }
 
-  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  const dateStr = new Date().toLocaleDateString("ar-EG");
-  a.href = url;
-  a.download = `نسخة-احتياطية-${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const json = JSON.stringify(obj);
+  const encoded = encodeURIComponent(toBase64Unicode(json));
+  const fullUrl = `${BACKUP_PAGE_URL}#data=${encoded}`;
 
-  window.localStorage.setItem("__lastBackupDate__", dateStr);
+  window.localStorage.setItem("__lastBackupDate__", new Date().toLocaleDateString("ar-EG"));
   refreshStats();
-  showToast("تم تحميل النسخة الاحتياطية بنجاح ✅");
+
+  document.getElementById("linkInput").value = fullUrl;
+  document.getElementById("linkRow").classList.add("show");
+  document.getElementById("openInfo").classList.add("show");
+
+  try{
+    const win = window.open(fullUrl, "_blank");
+    if(win){
+      showToast("تم فتح صفحة التحميل ✅");
+    }else{
+      showToast("انسخ الرابط تحت وافتحه بالمتصفح", true);
+    }
+  }catch(e){
+    showToast("انسخ الرابط تحت وافتحه بالمتصفح", true);
+  }
 }
 
-/* ==== اختيار ملف الاستعادة ==== */
+function copyLink(){
+  const input = document.getElementById("linkInput");
+  const btn = document.getElementById("copyBtn");
+
+  const doCopiedUI = () => {
+    btn.textContent = "تم النسخ ✓";
+    btn.classList.add("copied");
+    setTimeout(() => {
+      btn.textContent = "نسخ";
+      btn.classList.remove("copied");
+    }, 2000);
+    showToast("تم نسخ الرابط، افتحه بالمتصفح 📋");
+  };
+
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(input.value).then(doCopiedUI).catch(() => {
+      fallbackCopy(input, doCopiedUI);
+    });
+  }else{
+    fallbackCopy(input, doCopiedUI);
+  }
+}
+
+function fallbackCopy(input, cb){
+  input.removeAttribute("readonly");
+  input.select();
+  input.setSelectionRange(0, 99999);
+  try{
+    document.execCommand("copy");
+    cb();
+  }catch(e){
+    showToast("ما قدرنا ننسخ، حدد الرابط يدويًا", true);
+  }
+  input.setAttribute("readonly", "true");
+}
+
 let pendingFile = null;
 
 function fileSelected(event){
@@ -338,7 +561,9 @@ function restoreFromFile(file){
   reader.readAsText(file);
 }
 
-refreshStats();
+if(incomingData === null){
+  refreshStats();
+}
 </script>
 
 </body>
