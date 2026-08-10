@@ -25,6 +25,8 @@
             --violet-light: #faf5ff;
             --teal: #0d9488;
             --teal-light: #f0fdfa;
+            --pink: #db2777;
+            --pink-light: #fdf2f8;
             --text: #0f172a;
             --text-mid: #334155;
             --text-muted: #64748b;
@@ -413,11 +415,11 @@
         }
         .grid-item:active { transform: scale(0.95); box-shadow: none; }
         .icon-wrap {
-            width: 52px; height: 52px;
-            border-radius: 16px;
+            width: 62px; height: 62px;
+            border-radius: 18px;
             display: flex; align-items: center; justify-content: center;
             margin: 0 auto 11px;
-            font-size: 1.35rem;
+            font-size: 1.7rem;
         }
         .grid-item span {
             font-weight: 700;
@@ -433,6 +435,7 @@
         .item-green  .icon-wrap { background: var(--green-light);   color: var(--green);  }
         .item-red    .icon-wrap { background: var(--red-light);     color: var(--red);    }
         .item-teal   .icon-wrap { background: var(--teal-light);    color: var(--teal);   }
+        .item-pink   .icon-wrap { background: var(--pink-light);    color: var(--pink);   }
 
         /* Note card */
         .note-card {
@@ -579,6 +582,10 @@
             <div class="icon-wrap"><i class="fas fa-cloud-arrow-up"></i></div>
             <span>نسخ احتياطي</span>
         </a>
+        <a href="sup.html" class="grid-item item-pink">
+            <div class="icon-wrap"><i class="fas fa-headset"></i></div>
+            <span>خدمة العملاء</span>
+        </a>
     </div>
 
     <!-- Note -->
@@ -589,6 +596,89 @@
     </div>
 
 </div>
+
+<script type="module">
+    /* ════════════════════════════════════════════
+       تسجيل الزيارات في Firebase (Firestore)
+       - كل دخول للصفحة يسجّل زيارة جديدة
+       - عداد إجمالي عدد الزيارات محفوظ بمستند واحد
+    ════════════════════════════════════════════ */
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import {
+        getFirestore, collection, addDoc, doc, setDoc,
+        serverTimestamp, increment
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyDtj_AsssLYm7ZZpgFeUTqYNCrAUevOprs",
+        authDomain: "the-chess-game-54a2c.firebaseapp.com",
+        databaseURL: "https://the-chess-game-54a2c-default-rtdb.firebaseio.com",
+        projectId: "the-chess-game-54a2c",
+        storageBucket: "the-chess-game-54a2c.firebasestorage.app",
+        messagingSenderId: "1012470944135",
+        appId: "1:1012470944135:web:353bd44c8f5f7d8dcdc322",
+        measurementId: "G-CFL72H1T3B"
+    };
+
+    const fbApp = initializeApp(firebaseConfig);
+    const db = getFirestore(fbApp);
+
+    async function logVisit() {
+        try {
+            const userName = localStorage.getItem("kanashi_user_name") || "";
+            const visitorId = getOrCreateVisitorId();
+            const isFirstEverVisit = !localStorage.getItem("kanashi_has_visited_before");
+
+            const visitData = {
+                timestamp: serverTimestamp(),
+                visitorId: visitorId,
+                userName: userName,
+                isNewVisitor: isFirstEverVisit,
+                userAgent: navigator.userAgent,
+                platform: navigator.platform || "",
+                language: navigator.language || "",
+                screenWidth: window.screen.width,
+                screenHeight: window.screen.height,
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight,
+                deviceType: /Mobi|Android/i.test(navigator.userAgent) ? "mobile" : "desktop",
+                referrer: document.referrer || "direct",
+                url: window.location.href,
+                connectionType: (navigator.connection && navigator.connection.effectiveType) || "unknown",
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+                online: navigator.onLine
+            };
+
+            // تسجيل زيارة فردية بسجل منفصل
+            await addDoc(collection(db, "visits"), visitData);
+
+            // تحديث عداد إجمالي الزيارات + عدد الزوار الفريدين
+            await setDoc(doc(db, "stats", "visitorStats"), {
+                totalVisits: increment(1),
+                uniqueVisitors: isFirstEverVisit ? increment(1) : increment(0),
+                lastVisit: serverTimestamp()
+            }, { merge: true });
+
+            if (isFirstEverVisit) {
+                localStorage.setItem("kanashi_has_visited_before", "1");
+            }
+        } catch (e) {
+            // ما نوقف التطبيق لو صار خطأ بالتسجيل
+            console.warn("تعذر تسجيل الزيارة:", e);
+        }
+    }
+
+    function getOrCreateVisitorId() {
+        let id = localStorage.getItem("kanashi_visitor_id");
+        if (!id) {
+            id = "v_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+            localStorage.setItem("kanashi_visitor_id", id);
+        }
+        return id;
+    }
+
+    logVisit();
+</script>
 
 <script>
     /* ════════════════════════════════════════════
