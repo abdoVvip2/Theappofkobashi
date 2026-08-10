@@ -29,6 +29,7 @@
     font-family:'Tajawal', sans-serif;
     color:var(--ink);
     height:100vh;
+    height:100dvh;
     display:flex;
     flex-direction:column;
     max-width:480px;
@@ -157,11 +158,12 @@
 
   .composer{
     background:var(--card-bg);
-    padding:12px 14px;
+    padding:12px 14px calc(12px + env(safe-area-inset-bottom, 0px) + 18px);
     display:flex;
     gap:10px;
     align-items:flex-end;
     box-shadow:0 -4px 14px rgba(47,95,224,0.06);
+    flex-shrink:0;
   }
   .composer textarea{
     flex:1;
