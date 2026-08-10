@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>النسخ الاحتياطي والاستعادة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:        #2f5fe0;
+    --blue-dark:   #24409e;
+    --blue-light:  #eaf1ff;
+    --blue-pale:   #f4f8ff;
+    --ink:         #1c2340;
+    --muted:       #7a84a6;
+    --gray-bg:     #f0f2f8;
+    --card-bg:     #ffffff;
+    --pink:        #ffe1e6;
+    --pink-ink:    #d64d63;
+    --peach:       #ffe9d2;
+    --peach-ink:   #d8822e;
+    --mint:        #d9f5e6;
+    --mint-ink:    #229a63;
+    --radius-lg:   22px;
+    --radius-md:   16px;
+    --radius-sm:   12px;
+    --shadow:      0 6px 18px rgba(47,95,224,0.08);
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--gray-bg);
+    font-family:'Tajawal', sans-serif;
+    color:var(--ink);
+    padding:18px 14px 60px;
+    max-width:480px;
+    margin-inline:auto;
+  }
+
+  .header-card{
+    background:var(--card-bg);
+    border-radius:var(--radius-lg);
+    padding:26px 22px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    box-shadow:var(--shadow);
+    border-inline-end:6px solid var(--blue);
+    margin-bottom:18px;
+  }
+  .header-card h1{ font-size:1.3rem; font-weight:900; margin:0; }
+  .header-card p{ margin:6px 0 0; font-size:0.85rem; color:var(--muted); font-weight:500; }
+  .header-card .icon{ font-size:1.8rem; }
+
+  .stats-card{
+    background:var(--card-bg);
+    border-radius:var(--radius-lg);
+    padding:20px;
+    box-shadow:var(--shadow);
+    border:2px solid var(--blue);
+    margin-bottom:18px;
+  }
+  .stats-title{
+    display:flex; align-items:center; justify-content:flex-end;
+    gap:8px; font-weight:700; margin-bottom:16px;
+  }
+  .stats-row{ display:flex; gap:12px; }
+  .stat-box{
+    flex:1; background:var(--blue-light);
+    border-radius:var(--radius-md); text-align:center; padding:18px 10px;
+  }
+  .stat-box .num{ font-size:2rem; font-weight:900; color:var(--blue); line-height:1.2; }
+  .stat-box .label{ font-size:0.82rem; color:var(--muted); font-weight:500; margin-top:4px; }
+
+  .section-card{
+    background:var(--card-bg);
+    border-radius:var(--radius-lg);
+    padding:22px;
+    box-shadow:var(--shadow);
+    border-inline-end:6px solid var(--blue);
+    margin-bottom:18px;
+  }
+  .section-card.upload{ border-inline-end-color: var(--peach-ink); }
+
+  .section-top{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .section-title{ font-size:1.1rem; font-weight:900; display:flex; align-items:center; gap:8px; }
+  .badge{
+    background:var(--blue); color:#fff; font-weight:700; font-size:0.78rem;
+    padding:6px 14px; border-radius:999px;
+  }
+  .badge.warn{ background:var(--peach-ink); }
+  .badge.done{ background:var(--mint-ink); }
+
+  .section-desc{
+    font-size:0.88rem; color:var(--muted); font-weight:500;
+    line-height:1.7; margin-bottom:16px;
+  }
+
+  .main-btn{
+    width:100%; padding:16px; border:none; border-radius:var(--radius-md);
+    font-family:'Tajawal', sans-serif; font-weight:800; font-size:1rem;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    cursor:pointer;
+  }
+  .main-btn.blue{ background:var(--blue); color:#fff; }
+  .main-btn.orange{ background:var(--peach-ink); color:#fff; }
+  .main-btn:active{ transform:scale(0.98); }
+  input[type=file]{ display:none; }
+
+  .warning-box{
+    background:var(--pink);
+    color:var(--pink-ink);
+    border-radius:var(--radius-md);
+    padding:14px 16px;
+    font-size:0.85rem;
+    font-weight:700;
+    line-height:1.7;
+    display:flex;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .warning-box .ic{ font-size:1.2rem; flex-shrink:0; }
+
+  .file-chip{
+    background:var(--blue-pale);
+    color:var(--blue-dark);
+    border-radius:var(--radius-sm);
+    padding:12px 14px;
+    font-size:0.85rem;
+    font-weight:700;
+    margin-bottom:14px;
+    display:none;
+    align-items:center;
+    justify-content:space-between;
+  }
+
+  .toast{
+    position:fixed;
+    bottom:24px;
+    right:50%;
+    transform:translateX(50%);
+    background:var(--ink);
+    color:#fff;
+    padding:14px 22px;
+    border-radius:999px;
+    font-weight:700;
+    font-size:0.9rem;
+    box-shadow:0 8px 20px rgba(0,0,0,0.2);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.25s, bottom 0.25s;
+    z-index:50;
+    white-space:nowrap;
+  }
+  .toast.show{ opacity:1; bottom:34px; }
+  .toast.err{ background:var(--pink-ink); }
+</style>
+</head>
+<body>
+
+  <div class="header-card">
+    <span class="icon">⚙️</span>
+    <div>
+      <h1>النسخ الاحتياطي والاستعادة</h1>
+      <p>احفظ بياناتك أو رجّعها في أي وقت</p>
+    </div>
+  </div>
+
+  <div class="stats-card">
+    <div class="stats-title">📊 نظرة عامة</div>
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="num" id="itemCount">0</div>
+        <div class="label">عنصر محفوظ حاليًا</div>
+      </div>
+      <div class="stat-box">
+        <div class="num" id="lastBackup">—</div>
+        <div class="label">آخر نسخة احتياطية</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- تحميل (Backup) -->
+  <div class="section-card">
+    <div class="section-top">
+      <div class="badge">تحميل</div>
+      <div class="section-title">💾 حفظ نسخة</div>
+    </div>
+    <div class="section-desc">
+      يحفظ هذا الخيار كل بياناتك الحالية في ملف واحد على جهازك، تقدر ترجع له لاحقًا أو تنقله لجهاز ثاني.
+    </div>
+    <button class="main-btn blue" onclick="downloadBackup()">
+      ⬇️ تحميل نسخة احتياطية
+    </button>
+  </div>
+
+  <!-- رفع (Restore) -->
+  <div class="section-card upload">
+    <div class="section-top">
+      <div class="badge warn">استعادة</div>
+      <div class="section-title">📤 رفع نسخة سابقة</div>
+    </div>
+    <div class="section-desc">
+      ارفع ملف نسخة احتياطية سبق وحمّلته، وبيانات التطبيق الحالية بترجع كما كانت وقت الحفظ.
+    </div>
+
+    <div class="warning-box">
+      <span class="ic">⚠️</span>
+      <span>تنبيه: رفع نسخة جديدة بيستبدل كل البيانات الموجودة حاليًا في التطبيق، وما ينرجع الوضع اللي قبله. تأكد إنك تحمّل نسخة حديثة قبل ما تكمل.</span>
+    </div>
+
+    <div class="file-chip" id="fileChip">
+      <span id="fileChipName">—</span>
+      <span>📄</span>
+    </div>
+
+    <input type="file" id="fileInput" accept=".json" onchange="fileSelected(event)">
+    <button class="main-btn orange" onclick="document.getElementById('fileInput').click()">
+      📁 اختيار ملف الاستعادة
+    </button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ==== إعداد داخلي (Storage layer) - المستخدم ما يشوف هذي المصطلحات في الواجهة ==== */
+const DB_NAME = "AppDataBackupDB";
+const STORE_NAME = "backup";
+
+function openDB(){
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains(STORE_NAME)){
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function showToast(msg, isErr){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isErr ? " err" : "");
+  setTimeout(() => { t.className = "toast" + (isErr ? " err" : ""); }, 2600);
+}
+
+async function refreshStats(){
+  document.getElementById("itemCount").textContent = window.localStorage.length;
+  const saved = window.localStorage.getItem("__lastBackupDate__");
+  document.getElementById("lastBackup").textContent = saved ? saved : "—";
+}
+
+/* ==== تحميل نسخة ==== */
+function downloadBackup(){
+  const obj = {};
+  for(let i=0; i<window.localStorage.length; i++){
+    const key = window.localStorage.key(i);
+    obj[key] = window.localStorage.getItem(key);
+  }
+
+  if(Object.keys(obj).length === 0){
+    showToast("ما فيه بيانات لحفظها حاليًا", true);
+    return;
+  }
+
+  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const dateStr = new Date().toLocaleDateString("ar-EG");
+  a.href = url;
+  a.download = `نسخة-احتياطية-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  window.localStorage.setItem("__lastBackupDate__", dateStr);
+  refreshStats();
+  showToast("تم تحميل النسخة الاحتياطية بنجاح ✅");
+}
+
+/* ==== اختيار ملف الاستعادة ==== */
+let pendingFile = null;
+
+function fileSelected(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  pendingFile = file;
+
+  document.getElementById("fileChip").style.display = "flex";
+  document.getElementById("fileChipName").textContent = file.name;
+
+  confirmRestore(file);
+}
+
+function confirmRestore(file){
+  const sure = confirm(
+    "متأكد إنك تبي تستعيد هذي النسخة؟\n\nكل البيانات الحالية بتنستبدل بمحتوى الملف، وهذا الإجراء ما ينرجع."
+  );
+  if(!sure){
+    resetFileInput();
+    return;
+  }
+  restoreFromFile(file);
+}
+
+function resetFileInput(){
+  document.getElementById("fileInput").value = "";
+  document.getElementById("fileChip").style.display = "none";
+  pendingFile = null;
+}
+
+function restoreFromFile(file){
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const data = JSON.parse(e.target.result);
+      window.localStorage.clear();
+      Object.keys(data).forEach(key => {
+        window.localStorage.setItem(key, data[key]);
+      });
+      showToast("تم استرجاع البيانات بنجاح ✅");
+      refreshStats();
+    }catch(err){
+      showToast("الملف غير صالح، تأكد إنه نفس ملف النسخة الاحتياطية", true);
+    }
+    resetFileInput();
+  };
+  reader.onerror = () => {
+    showToast("صار خطأ أثناء قراءة الملف", true);
+    resetFileInput();
+  };
+  reader.readAsText(file);
+}
+
+refreshStats();
+</script>
+
+</body>
+</html>
