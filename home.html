@@ -528,7 +528,7 @@
     <!-- Next session -->
     <div class="card next-session">
         <div>
-            <div class="label">الفوج القادم اليوم</div>
+            <div class="label" id="sessionCardLabel">الفوج القادم اليوم</div>
             <h3 id="sessionLabel">جارٍ التحقق...</h3>
         </div>
         <div class="clock-icon"><i class="far fa-clock"></i></div>
@@ -774,6 +774,52 @@
         loadDashboard();
     }
 
+    /* ── أيام الأسبوع (نفس ترتيب Date.getDay(): 0=الأحد...6=السبت) ── */
+    const dayIndexMap = {
+        "الأحد": 0, "الاثنين": 1, "الثلاثاء": 2, "الأربعاء": 3,
+        "الخميس": 4, "الجمعة": 5, "السبت": 6
+    };
+    const dayNamesByIdx = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+
+    /** يرجع مصفوفة الحصص لفوج معيّن (schedule الجديدة أو day/time القديمة كـ fallback) */
+    function getGroupSchedule(g) {
+        if (g.schedule && g.schedule.length > 0) return g.schedule;
+        if (g.day && g.time) return [{ day: g.day, time: g.time, endTime: g.endTime || "" }];
+        return [];
+    }
+
+    /** يدوّر على حصص اليوم، ولو ما كانش، يدوّر على أقرب يوم قادم فيه حصص */
+    function findNextSessions(groups) {
+        const todayIdx = new Date().getDay();
+
+        let allSessions = [];
+        groups.forEach(g => {
+            getGroupSchedule(g).forEach(s => {
+                if (!s.day || dayIndexMap[s.day] === undefined || !s.time) return;
+                allSessions.push({ groupName: g.name, time: s.time, dayIdx: dayIndexMap[s.day] });
+            });
+        });
+
+        if (allSessions.length === 0) return null;
+
+        let todaySessions = allSessions.filter(s => s.dayIdx === todayIdx);
+        if (todaySessions.length > 0) {
+            todaySessions.sort((a, b) => a.time.localeCompare(b.time));
+            return { label: "اليوم", sessions: todaySessions };
+        }
+
+        for (let offset = 1; offset <= 7; offset++) {
+            const checkIdx = (todayIdx + offset) % 7;
+            let daySessions = allSessions.filter(s => s.dayIdx === checkIdx);
+            if (daySessions.length > 0) {
+                daySessions.sort((a, b) => a.time.localeCompare(b.time));
+                const label = offset === 1 ? "غداً" : dayNamesByIdx[checkIdx];
+                return { label, sessions: daySessions };
+            }
+        }
+        return null;
+    }
+
     async function loadDashboard() {
         const students = await getData("students");
         const groups   = await getData("groups");
@@ -787,12 +833,16 @@
             setTimeout(() => bar.style.height = Math.min(90, (totalPaid / 50000) * 100 + 10) + "%", 100);
         }
 
-        const dayMap = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
-        const today  = dayMap[new Date().getDay()];
-        const nextG  = groups.find(g => g.days && g.days.includes(today));
-        document.getElementById("sessionLabel").innerText = nextG
-            ? `${nextG.name} — ${nextG.time}`
-            : "لا دروس مجدولة اليوم";
+        const next = findNextSessions(groups);
+        if (next) {
+            document.getElementById("sessionCardLabel").innerText =
+                next.label === "اليوم" ? "الفوج القادم اليوم" : `أقرب حصة (${next.label})`;
+            document.getElementById("sessionLabel").innerText =
+                next.sessions.map(s => `${s.groupName} — ${s.time}`).join(" • ");
+        } else {
+            document.getElementById("sessionCardLabel").innerText = "الفوج القادم";
+            document.getElementById("sessionLabel").innerText = "لا توجد أفواج مجدولة بعد";
+        }
 
         const note = localStorage.getItem("kanashi_quick_note");
         if (note) document.getElementById("noteLabel").innerText = note;
