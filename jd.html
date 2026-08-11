@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>كناشي Pro - النسخة الكاملة 24/7</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        /* --- التصميم الأصلي (بدون تغيير) --- */
         :root {
             --primary: #2d8cf0;
             --bg-body: #f4f6f9;
@@ -15,7 +15,18 @@
             --text-gray: #64748b;
             --accent-green: #10b981;
             --border: #e2e8f0;
-            --highlight-bg: #e0f2fe; 
+            --highlight-bg: #e0f2fe;
+            --cell-w: 90px;
+            --day-w: 110px;
+            --row-h: 100px;
+        }
+
+        @media (max-width: 600px) {
+            :root {
+                --cell-w: 62px;
+                --day-w: 76px;
+                --row-h: 74px;
+            }
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -30,33 +41,70 @@
 
         .app-header {
             background: var(--white);
-            padding: 20px;
+            padding: 16px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             position: sticky; top: 0; z-index: 100;
+            gap: 10px;
         }
 
-        .header-info h1 { margin: 0; font-size: 1.3rem; font-weight: 800; color: var(--primary); }
-        .header-info p { margin: 4px 0 0; font-size: 0.8rem; color: var(--text-gray); }
+        .header-info h1 { margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--primary); }
+        .header-info p { margin: 4px 0 0; font-size: 0.75rem; color: var(--text-gray); }
+
+        .header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+        .icon-btn {
+            width: 42px; height: 42px;
+            background: #eff6ff; color: var(--primary);
+            border: none; border-radius: 13px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; cursor: pointer;
+        }
+        .icon-btn:active { transform: scale(0.93); }
+        .icon-btn.download { background: #ecfdf5; color: var(--accent-green); }
+        .icon-btn.loading { pointer-events: none; opacity: 0.6; }
+
+        /* بانر الحصة الحالية / القادمة */
+        .status-banner {
+            margin: 12px 12px 0;
+            background: var(--white);
+            border-radius: 20px;
+            padding: 15px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            border: 1px solid var(--border);
+            border-right: 4px solid var(--primary);
+        }
+        .status-banner.live { border-right-color: var(--accent-green); background: #f0fdf9; }
+        .status-banner .sb-icon {
+            width: 40px; height: 40px; border-radius: 12px;
+            background: var(--highlight-bg); color: var(--primary);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.05rem; flex-shrink: 0;
+        }
+        .status-banner.live .sb-icon { background: #d1fae5; color: var(--accent-green); }
+        .status-banner .sb-text small { display: block; font-size: 0.7rem; color: var(--text-gray); margin-bottom: 3px; font-weight: 700; }
+        .status-banner .sb-text b { font-size: 0.92rem; color: var(--text-main); }
 
         .stats-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            padding: 15px;
+            gap: 12px;
+            padding: 12px;
         }
         .stat-card {
             background: var(--white);
-            padding: 15px;
-            border-radius: 20px;
+            padding: 14px;
+            border-radius: 18px;
             text-align: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.02);
             border: 1px solid var(--border);
         }
-        .stat-card small { display: block; color: var(--text-gray); font-size: 0.75rem; margin-bottom: 5px; }
-        .stat-card b { font-size: 1.2rem; color: var(--text-main); }
+        .stat-card small { display: block; color: var(--text-gray); font-size: 0.72rem; margin-bottom: 5px; }
+        .stat-card b { font-size: 1.15rem; color: var(--text-main); }
 
         .table-section {
             margin: 10px;
@@ -67,19 +115,29 @@
             border: 1px solid var(--border);
         }
 
-        .scroll-wrapper { overflow-x: auto; }
+        .scroll-wrapper {
+            overflow-x: auto;
+            overflow-y: hidden;
+            position: relative;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #sessionsOverlay {
+            position: absolute;
+            top: 0; left: 0;
+            pointer-events: none;
+            z-index: 5;
+        }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            /* عرض الجدول سيزداد ليتناسب مع 24 ساعة */
-            min-width: 2600px; 
         }
 
         th, td {
             border: 1px solid #f1f5f9;
-            padding: 10px;
-            height: 100px;
+            padding: 0;
+            height: var(--row-h);
             text-align: center;
             position: relative;
         }
@@ -87,58 +145,57 @@
         thead th {
             background: #f8fafc;
             color: var(--text-gray);
-            font-size: 0.8rem;
-            height: 50px;
+            font-size: 0.72rem;
+            height: 44px;
             border-bottom: 2px solid var(--border);
+            width: var(--cell-w);
+            min-width: var(--cell-w);
         }
 
         .day-header {
             background: #f8fafc;
             font-weight: 800;
             color: var(--text-main);
-            width: 100px;
+            width: var(--day-w);
+            min-width: var(--day-w);
             position: sticky;
             right: 0;
             z-index: 10;
             border-left: 2px solid var(--border);
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
-        .active-day-marker {
-            background: var(--primary) !important;
-            color: white !important;
-        }
+        .active-day-marker { background: var(--primary) !important; color: white !important; }
 
         .active-hour-marker {
             background: var(--highlight-bg) !important;
-            box-shadow: inset 0 0 0 3px var(--primary);
-            animation: pulse-border 2s infinite;
+            box-shadow: inset 0 0 0 2px var(--primary);
         }
 
-        @keyframes pulse-border {
-            0% { box-shadow: inset 0 0 0 3px var(--primary); }
-            50% { box-shadow: inset 0 0 0 0px var(--primary); }
-            100% { box-shadow: inset 0 0 0 3px var(--primary); }
-        }
-
-        .cell-slot { cursor: pointer; transition: 0.2s; background: #fff; }
+        .cell-slot { cursor: pointer; transition: 0.2s; background: #fff; width: var(--cell-w); min-width: var(--cell-w); }
         .cell-slot:hover { background: #f0f7ff; }
 
-        .item-card {
-            width: 100%; height: 100%;
-            border-radius: 15px;
+        /* بطاقة الحصة العائمة (تمتد بحسب المدة الفعلية) */
+        .item-card-abs {
+            position: absolute;
+            border-radius: 13px;
             display: flex; flex-direction: column;
             justify-content: center; align-items: center;
-            color: white; font-weight: bold; font-size: 0.85rem;
-            padding: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            animation: popUp 0.3s ease;
+            color: white; font-weight: bold; font-size: 0.72rem;
+            padding: 4px 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            pointer-events: auto;
+            cursor: pointer;
+            overflow: hidden;
+            text-align: center;
+            line-height: 1.25;
         }
+        .item-card-abs .grp { font-size: 0.62rem; font-weight: normal; opacity: 0.9; margin-top: 2px; }
+        .item-card-abs .tm { font-size: 0.58rem; font-weight: normal; opacity: 0.8; margin-top: 2px; }
+        .item-card-abs.from-group { border: 2px dashed rgba(255,255,255,0.7); }
+        .item-card-abs .tag-ic { font-size: 0.6rem; opacity: 0.85; }
 
-        @keyframes popUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .item-card span { font-size: 0.7rem; font-weight: normal; margin-top: 4px; opacity: 0.85; }
-
-        .overlay {
+        .overlay-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(5px);
             z-index: 1000; justify-content: center; align-items: center; padding: 20px;
@@ -147,44 +204,51 @@
         .modal-body {
             background: var(--white); width: 100%; max-width: 400px;
             border-radius: 30px; padding: 25px; box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+            max-height: 90vh; overflow-y: auto;
         }
 
-        .modal-body h2 { margin: 0 0 20px; font-size: 1.25rem; text-align: center; color: var(--text-main); }
+        .modal-body h2 { margin: 0 0 20px; font-size: 1.2rem; text-align: center; color: var(--text-main); }
 
-        .field-group { margin-bottom: 20px; }
-        .field-group label { display: block; font-size: 0.85rem; color: var(--text-gray); margin-bottom: 8px; }
-        
+        .field-group { margin-bottom: 18px; }
+        .field-group label { display: block; font-size: 0.82rem; color: var(--text-gray); margin-bottom: 8px; font-weight: 600; }
+
         .flex-row { display: flex; gap: 10px; }
 
         .input-ctrl {
-            flex: 1; padding: 14px; border: 2px solid var(--border);
-            border-radius: 15px; font-size: 1rem; outline: none; background: #f8fafc;
-            color: var(--text-main); transition: 0.3s;
+            flex: 1; padding: 13px; border: 2px solid var(--border);
+            border-radius: 15px; font-size: 0.95rem; outline: none; background: #f8fafc;
+            color: var(--text-main); transition: 0.3s; font-family: inherit;
         }
         .input-ctrl:focus { border-color: var(--primary); background: #fff; }
 
         .add-btn-small {
-            width: 50px; background: var(--primary); color: white; border: none;
-            border-radius: 12px; font-size: 1.2rem; cursor: pointer;
+            width: 46px; background: var(--primary); color: white; border: none;
+            border-radius: 12px; font-size: 1.2rem; cursor: pointer; flex-shrink: 0;
         }
 
         .palette { display: flex; justify-content: space-between; margin: 15px 0; }
         .color-circle {
-            width: 35px; height: 35px; border-radius: 50%; cursor: pointer;
+            width: 33px; height: 33px; border-radius: 50%; cursor: pointer;
             border: 3px solid transparent; transition: 0.2s;
         }
         .color-circle.active { border-color: var(--text-main); transform: scale(1.1); }
 
-        .modal-btns { display: flex; gap: 12px; margin-top: 25px; }
+        .modal-btns { display: flex; gap: 10px; margin-top: 22px; }
         .f-btn {
-            flex: 1; padding: 15px; border-radius: 15px; border: none;
-            font-weight: bold; cursor: pointer; font-size: 1rem;
+            flex: 1; padding: 14px; border-radius: 15px; border: none;
+            font-weight: bold; cursor: pointer; font-size: 0.92rem;
         }
         .f-btn-save { background: var(--primary); color: white; }
         .f-btn-del { background: #fee2e2; color: #ef4444; }
         .f-btn-close { background: #f1f5f9; color: var(--text-gray); }
 
-        footer { text-align: center; padding: 20px; font-size: 0.75rem; color: var(--text-gray); }
+        footer { text-align: center; padding: 18px; font-size: 0.72rem; color: var(--text-gray); }
+
+        @media (max-width: 600px) {
+            .app-header { padding: 14px 16px; }
+            .header-info h1 { font-size: 1rem; }
+            .modal-body { padding: 20px 18px; border-radius: 24px; }
+        }
     </style>
 </head>
 <body>
@@ -194,10 +258,21 @@
             <h1>كناشي Pro <i class="fas fa-check-circle"></i></h1>
             <p id="topDate">جاري التحديث...</p>
         </div>
-        <div style="background: #eff6ff; color: var(--primary); padding: 10px 15px; border-radius: 15px;">
-            <i class="fas fa-calendar-alt"></i>
+        <div class="header-actions">
+            <button class="icon-btn download" id="downloadBtn" onclick="downloadSchedule()" title="تحميل الجدول">
+                <i class="fas fa-download"></i>
+            </button>
+            <div class="icon-btn"><i class="fas fa-calendar-alt"></i></div>
         </div>
     </header>
+
+    <div class="status-banner" id="statusBanner">
+        <div class="sb-icon"><i class="fas fa-hourglass-half"></i></div>
+        <div class="sb-text">
+            <small>جارٍ التحقق...</small>
+            <b>—</b>
+        </div>
+    </div>
 
     <div class="stats-container">
         <div class="stat-card">
@@ -211,7 +286,7 @@
     </div>
 
     <section class="table-section">
-        <div class="scroll-wrapper">
+        <div class="scroll-wrapper" id="scrollWrapper">
             <table>
                 <thead>
                     <tr id="topHourRow">
@@ -220,12 +295,22 @@
                 </thead>
                 <tbody id="mainGrid"></tbody>
             </table>
+            <div id="sessionsOverlay"></div>
         </div>
     </section>
 
-    <div class="overlay" id="editModal">
+    <div class="overlay-modal" id="editModal">
         <div class="modal-body">
-            <h2 id="modalHead">تعديل البيانات</h2>
+            <h2 id="modalHead">إضافة حصة</h2>
+
+            <div class="field-group">
+                <label>وقت الحصة (من - إلى)</label>
+                <div class="flex-row">
+                    <input type="time" id="startTimeInput" class="input-ctrl">
+                    <input type="time" id="endTimeInput" class="input-ctrl">
+                </div>
+            </div>
+
             <div class="field-group">
                 <label>اسم المادة</label>
                 <div class="flex-row">
@@ -264,51 +349,259 @@
     <script>
         const CORE = {
             days: [
-                { id: "sun", label: "الأحد" }, 
+                { id: "sun", label: "الأحد" },
                 { id: "mon", label: "الاثنين" },
-                { id: "tue", label: "الثلاثاء" }, 
+                { id: "tue", label: "الثلاثاء" },
                 { id: "wed", label: "الأربعاء" },
-                { id: "thu", label: "الخميس" }, 
-                { id: "fri", label: "الجمعة" }, // تمت إضافة الجمعة
+                { id: "thu", label: "الخميس" },
+                { id: "fri", label: "الجمعة" },
                 { id: "sat", label: "السبت" }
             ],
-            // توليد 24 ساعة برمجياً
             hours: Array.from({length: 24}, (_, i) => (i < 10 ? '0' + i : i) + ":00"),
-            dataKey: "kanashi_final_db",
+            dataKey: "kanashi_schedule_sessions_v2",
+            legacyKey: "kanashi_final_db",
             configKey: "kanashi_options_db",
-            targetCell: null,
-            pickedColor: "#2d8cf0"
+            pickedColor: "#2d8cf0",
+            editState: null // { mode: 'add'|'edit', dayId, dayLabel, sessionId }
         };
 
-        function start() {
-            createUI();
-            syncConfigs();
-            syncData();
-            runTimeLogic();
-            setInterval(runTimeLogic, 30000);
-            setupColors();
+        /* ---------- الاتصال بقاعدة بيانات الأفواج (نفس قاعدة الصفحة الرئيسية) ---------- */
+        const GROUPS_DB_NAME = "kanashi_db";
+        const GROUPS_DB_VERSION = 2;
+        let groupsDb = null;
+        let GROUP_SESSIONS = {}; // dayId -> array of sessions (للقراءة فقط، مصدرها الأفواج)
+
+        const dayLabelToId = {};
+        CORE.days.forEach(d => dayLabelToId[d.label] = d.id);
+
+        function openGroupsDB() {
+            return new Promise((resolve) => {
+                const req = indexedDB.open(GROUPS_DB_NAME, GROUPS_DB_VERSION);
+                req.onupgradeneeded = (e) => {
+                    const d = e.target.result;
+                    if (!d.objectStoreNames.contains("students")) d.createObjectStore("students", { keyPath: "id" });
+                    if (!d.objectStoreNames.contains("groups"))   d.createObjectStore("groups",   { keyPath: "id" });
+                    if (!d.objectStoreNames.contains("expenses")) d.createObjectStore("expenses", { keyPath: "id" });
+                };
+                req.onsuccess = (e) => { groupsDb = e.target.result; resolve(); };
+                req.onerror = () => resolve();
+            });
         }
 
+        function getGroupsData() {
+            return new Promise((resolve) => {
+                if (!groupsDb) { resolve([]); return; }
+                const tx = groupsDb.transaction("groups", "readonly");
+                const req = tx.objectStore("groups").getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => resolve([]);
+            });
+        }
+
+        function getGroupSchedule(g) {
+            if (g.schedule && g.schedule.length > 0) return g.schedule;
+            if (g.day && g.time) return [{ day: g.day, time: g.time, endTime: g.endTime || "" }];
+            return [];
+        }
+
+        function addOneHour(timeStr) {
+            const [h, m] = timeStr.split(':').map(Number);
+            const endH = Math.min(23, h + 1);
+            return `${String(endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        }
+
+        /* يبني GROUP_SESSIONS من بيانات الأفواج المخزّنة بصفحة "الأفواج" */
+        async function loadGroupSessions() {
+            const groups = await getGroupsData();
+            const result = {};
+            CORE.days.forEach(d => result[d.id] = []);
+
+            groups.forEach(g => {
+                getGroupSchedule(g).forEach(s => {
+                    const dayId = dayLabelToId[s.day];
+                    if (!dayId || !s.time) return;
+                    const start = s.time;
+                    const end = s.endTime && s.endTime.trim() ? s.endTime : addOneHour(start);
+                    result[dayId].push({
+                        id: 'grp_' + (g.id || g.name) + '_' + start,
+                        start, end,
+                        subject: g.name || 'فوج',
+                        group: 'من صفحة الأفواج',
+                        color: '#7c3aed',
+                        source: 'group'
+                    });
+                });
+            });
+
+            GROUP_SESSIONS = result;
+        }
+
+        async function start() {
+            migrateLegacyData();
+            createUI();
+            syncConfigs();
+
+            await openGroupsDB();
+            await loadGroupSessions();
+
+            requestAnimationFrame(() => {
+                layoutSessions();
+                runTimeLogic();
+            });
+            setInterval(runTimeLogic, 30000);
+            // إعادة تحميل الأفواج كل دقيقة (لو تمت إضافة فوج جديد بصفحة الأفواج)
+            setInterval(async () => {
+                await loadGroupSessions();
+                layoutSessions();
+            }, 60000);
+            setupColors();
+
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(layoutSessions, 150);
+            });
+        }
+
+        /* ---------- تحويل بيانات النظام القديم (حصة ثابتة/ساعة) لو موجودة ---------- */
+        function migrateLegacyData() {
+            if (localStorage.getItem(CORE.dataKey)) return;
+            const legacy = localStorage.getItem(CORE.legacyKey);
+            if (!legacy) return;
+            try {
+                const old = JSON.parse(legacy);
+                const fresh = {};
+                Object.keys(old).forEach(key => {
+                    const parts = key.split('_');
+                    const dayId = parts[0];
+                    const hourStr = parts[1]; // مثال 1000
+                    const hh = hourStr.slice(0, 2);
+                    const startTime = `${hh}:00`;
+                    const endHour = (parseInt(hh, 10) + 1) % 24;
+                    const endTime = `${String(endHour).padStart(2,'0')}:00`;
+                    if (!fresh[dayId]) fresh[dayId] = [];
+                    fresh[dayId].push({
+                        id: 'm_' + key,
+                        start: startTime,
+                        end: endTime,
+                        subject: old[key].s,
+                        group: old[key].g,
+                        color: old[key].c
+                    });
+                });
+                localStorage.setItem(CORE.dataKey, JSON.stringify(fresh));
+            } catch (e) { /* تجاهل أي خطأ بالتحويل */ }
+        }
+
+        /* ---------- إدارة البيانات ---------- */
+        function getAllData() {
+            return JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
+        }
+        function getDaySessions(dayId) {
+            const all = getAllData();
+            return all[dayId] || [];
+        }
+        function saveDaySessions(dayId, arr) {
+            const all = getAllData();
+            all[dayId] = arr;
+            localStorage.setItem(CORE.dataKey, JSON.stringify(all));
+        }
+        function generateId() {
+            return 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        }
+        function timeToDecimal(t) {
+            const [h, m] = t.split(':').map(Number);
+            return h + (m / 60);
+        }
+
+        /* ---------- بناء الشبكة ---------- */
         function createUI() {
             const head = document.getElementById("topHourRow");
             const body = document.getElementById("mainGrid");
-            
-            // إضافة العناوين (الساعات)
+
             CORE.hours.forEach(h => head.innerHTML += `<th>${h}</th>`);
 
-            // إضافة الصفوف (الأيام)
             CORE.days.forEach(day => {
                 let row = `<tr><td class="day-header" id="day_${day.id}">${day.label}</td>`;
-                CORE.hours.forEach(hour => {
-                    const cleanHour = hour.replace(":", "");
-                    const id = `${day.id}_${cleanHour}`;
-                    row += `<td class="cell-slot" id="${id}" onclick="openEditor('${id}', '${day.label}', '${hour}')"></td>`;
+                CORE.hours.forEach((hour, idx) => {
+                    const nextHour = (idx + 1 < 24) ? CORE.hours[idx + 1] : "23:59";
+                    row += `<td class="cell-slot" onclick="openAddEditor('${day.id}', '${day.label}', '${hour}', '${nextHour}')"></td>`;
                 });
                 row += `</tr>`;
                 body.innerHTML += row;
             });
         }
 
+        /* ---------- رسم الحصص فوق الشبكة (تدعم المدة الحرة) ---------- */
+        function layoutSessions() {
+            const wrapper = document.getElementById('scrollWrapper');
+            const overlay = document.getElementById('sessionsOverlay');
+            overlay.innerHTML = '';
+            overlay.style.width = wrapper.scrollWidth + 'px';
+            overlay.style.height = wrapper.scrollHeight + 'px';
+
+            const wrapperRect = wrapper.getBoundingClientRect();
+            const scrollLeft = wrapper.scrollLeft;
+            const scrollTop = wrapper.scrollTop;
+
+            const hourCells = Array.from(document.querySelectorAll('#topHourRow th')).slice(1);
+            if (hourCells.length === 0) return;
+            const hourRects = hourCells.map(c => c.getBoundingClientRect());
+            const cellWidth = hourRects[0].width;
+
+            const allData = getAllData();
+            let totalSessions = 0;
+
+            CORE.days.forEach(day => {
+                const dayHeaderEl = document.getElementById(`day_${day.id}`);
+                const dayRect = dayHeaderEl.getBoundingClientRect();
+                const manualSessions = allData[day.id] || [];
+                const groupSessions = GROUP_SESSIONS[day.id] || [];
+                const sessions = [...groupSessions, ...manualSessions];
+
+                sessions.forEach(sess => {
+                    totalSessions++;
+                    const startDec = timeToDecimal(sess.start);
+                    const endDec = timeToDecimal(sess.end);
+                    const startHourIdx = Math.min(23, Math.max(0, Math.floor(startDec)));
+                    const fractionIntoHour = startDec - startHourIdx;
+
+                    const left = (hourRects[startHourIdx].left - wrapperRect.left) + scrollLeft + (fractionIntoHour * cellWidth);
+                    const durationHours = Math.max(endDec - startDec, 0.1);
+                    const width = durationHours * cellWidth;
+                    const top = (dayRect.top - wrapperRect.top) + scrollTop + 4;
+                    const height = dayRect.height - 8;
+
+                    const block = document.createElement('div');
+                    block.className = 'item-card-abs' + (sess.source === 'group' ? ' from-group' : '');
+                    block.style.left = left + 'px';
+                    block.style.top = top + 'px';
+                    block.style.width = Math.max(width - 3, 24) + 'px';
+                    block.style.height = height + 'px';
+                    block.style.background = sess.color;
+                    block.innerHTML = `${sess.source === 'group' ? '<i class="fas fa-users tag-ic"></i> ' : ''}${escapeHtml(sess.subject)}<span class="grp">${escapeHtml(sess.group)}</span><span class="tm">${sess.start} - ${sess.end}</span>`;
+                    block.onclick = (e) => {
+                        e.stopPropagation();
+                        if (sess.source === 'group') {
+                            alert(`"${sess.subject}" فوج مأخوذ من صفحة الأفواج.\nلتعديل وقته أو حذفه، عدّله من هناك.`);
+                        } else {
+                            openEditEditor(day.id, day.label, sess);
+                        }
+                    };
+                    overlay.appendChild(block);
+                });
+            });
+
+            document.getElementById('sessionCounter').innerText = totalSessions;
+        }
+
+        function escapeHtml(str) {
+            const d = document.createElement('div');
+            d.textContent = String(str || '');
+            return d.innerHTML;
+        }
+
+        /* ---------- الوقت الحالي: تظليل + بانر الحصة الحالية/القادمة ---------- */
         function runTimeLogic() {
             document.querySelectorAll(".active-day-marker").forEach(e => e.classList.remove("active-day-marker"));
             document.querySelectorAll(".active-hour-marker").forEach(e => e.classList.remove("active-hour-marker"));
@@ -317,25 +610,53 @@
             const dayMap = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
             const todayId = dayMap[now.getDay()];
             const currentHour = now.getHours();
+            const nowDecimal = currentHour + (now.getMinutes() / 60);
 
             const dayLabel = document.getElementById(`day_${todayId}`);
             if (dayLabel) dayLabel.classList.add("active-day-marker");
 
-            const hourStr = (currentHour < 10 ? "0" + currentHour : currentHour) + "00";
-            const slot = document.getElementById(`${todayId}_${hourStr}`);
-            
-            if (slot) {
-                slot.classList.add("active-hour-marker");
-                // التمرير التلقائي للساعة الحالية (اختياري لكن مفيد لأن الجدول طويل)
-                // slot.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            const hourHeaders = Array.from(document.querySelectorAll('#topHourRow th')).slice(1);
+            const rowEl = dayLabel ? dayLabel.parentElement : null;
+            if (rowEl && hourHeaders[currentHour]) {
+                const cells = rowEl.querySelectorAll('.cell-slot');
+                if (cells[currentHour]) cells[currentHour].classList.add('active-hour-marker');
             }
 
-            // تحديث الحالة
-            document.getElementById("workStatus").innerText = "نشط الآن";
             document.getElementById("topDate").innerText = now.toLocaleDateString("ar-DZ", { weekday: 'long', hour: '2-digit', minute: '2-digit' });
+
+            /* الحصة الجارية أو القادمة (تشمل الأفواج + الحصص اليدوية) */
+            const allData = getAllData();
+            const manualToday = allData[todayId] || [];
+            const groupToday = GROUP_SESSIONS[todayId] || [];
+            const todaySessions = [...groupToday, ...manualToday].sort((a, b) => timeToDecimal(a.start) - timeToDecimal(b.start));
+
+            const live = todaySessions.find(s => nowDecimal >= timeToDecimal(s.start) && nowDecimal < timeToDecimal(s.end));
+            const banner = document.getElementById('statusBanner');
+            const workStatus = document.getElementById('workStatus');
+
+            if (live) {
+                banner.classList.add('live');
+                banner.querySelector('.sb-icon').innerHTML = '<i class="fas fa-circle-play"></i>';
+                banner.querySelector('small').innerText = 'جارية الآن';
+                banner.querySelector('b').innerText = `${live.subject} — ${live.group} (${live.start} إلى ${live.end})`;
+                workStatus.innerText = "في حصة الآن";
+            } else {
+                banner.classList.remove('live');
+                const next = todaySessions.find(s => timeToDecimal(s.start) > nowDecimal);
+                if (next) {
+                    banner.querySelector('.sb-icon').innerHTML = '<i class="fas fa-hourglass-half"></i>';
+                    banner.querySelector('small').innerText = 'الحصة القادمة اليوم';
+                    banner.querySelector('b').innerText = `${next.subject} — ${next.group} الساعة ${next.start}`;
+                } else {
+                    banner.querySelector('.sb-icon').innerHTML = '<i class="fas fa-mug-hot"></i>';
+                    banner.querySelector('small').innerText = 'اليوم';
+                    banner.querySelector('b').innerText = 'لا توجد حصص متبقية اليوم';
+                }
+                workStatus.innerText = "متاح الآن";
+            }
         }
 
-        // باقي الدوال (syncConfigs, addNewOption, openEditor, saveSession, etc.) تبقى كما هي تماماً
+        /* ---------- الإعدادات (مواد / أفواج) ---------- */
         function syncConfigs() {
             const def = { sub: ["رياضيات", "فيزياء", "علوم"], grp: ["1 ثانوي", "2 ثانوي", "3 ثانوي"] };
             const cfg = JSON.parse(localStorage.getItem(CORE.configKey) || JSON.stringify(def));
@@ -359,61 +680,74 @@
             }
         }
 
-        function openEditor(id, day, hour) {
-            CORE.targetCell = id;
-            const db = JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
-            const session = db[id];
-            document.getElementById("modalHead").innerText = `${day} - الساعة ${hour}`;
-            document.getElementById("deleteBtn").style.display = session ? "block" : "none";
-            if (session) {
-                document.getElementById("subjectDrop").value = session.s;
-                document.getElementById("groupDrop").value = session.g;
-                applyColorUI(session.c);
-            }
+        /* ---------- فتح النافذة: إضافة أو تعديل ---------- */
+        window.openAddEditor = function (dayId, dayLabel, startHour, endHour) {
+            CORE.editState = { mode: 'add', dayId, dayLabel, sessionId: null };
+            document.getElementById("modalHead").innerText = `إضافة حصة — ${dayLabel}`;
+            document.getElementById("startTimeInput").value = startHour;
+            document.getElementById("endTimeInput").value = endHour;
+            document.getElementById("deleteBtn").style.display = "none";
+            applyColorUI("#2d8cf0");
             document.getElementById("editModal").style.display = "flex";
-        }
+        };
 
-        function closeEditor() { document.getElementById("editModal").style.display = "none"; }
+        window.openEditEditor = function (dayId, dayLabel, sess) {
+            CORE.editState = { mode: 'edit', dayId, dayLabel, sessionId: sess.id };
+            document.getElementById("modalHead").innerText = `تعديل حصة — ${dayLabel}`;
+            document.getElementById("startTimeInput").value = sess.start;
+            document.getElementById("endTimeInput").value = sess.end;
+            document.getElementById("subjectDrop").value = sess.subject;
+            document.getElementById("groupDrop").value = sess.group;
+            document.getElementById("deleteBtn").style.display = "block";
+            applyColorUI(sess.color);
+            document.getElementById("editModal").style.display = "flex";
+        };
 
-        function saveSession() {
-            const s = document.getElementById("subjectDrop").value;
-            const g = document.getElementById("groupDrop").value;
-            const db = JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
-            db[CORE.targetCell] = { s, g, c: CORE.pickedColor };
-            localStorage.setItem(CORE.dataKey, JSON.stringify(db));
-            drawCell(CORE.targetCell, s, g, CORE.pickedColor);
+        window.closeEditor = function () {
+            document.getElementById("editModal").style.display = "none";
+            CORE.editState = null;
+        };
+
+        window.saveSession = function () {
+            const state = CORE.editState;
+            if (!state) return;
+
+            const start = document.getElementById("startTimeInput").value;
+            const end = document.getElementById("endTimeInput").value;
+            const subject = document.getElementById("subjectDrop").value;
+            const group = document.getElementById("groupDrop").value;
+
+            if (!start || !end) { alert("حدّد وقت البداية والنهاية"); return; }
+            if (timeToDecimal(end) <= timeToDecimal(start)) { alert("وقت النهاية لازم يكون بعد وقت البداية"); return; }
+
+            const sessions = getDaySessions(state.dayId);
+
+            if (state.mode === 'edit') {
+                const idx = sessions.findIndex(s => s.id === state.sessionId);
+                if (idx > -1) {
+                    sessions[idx] = { id: state.sessionId, start, end, subject, group, color: CORE.pickedColor };
+                }
+            } else {
+                sessions.push({ id: generateId(), start, end, subject, group, color: CORE.pickedColor });
+            }
+
+            saveDaySessions(state.dayId, sessions);
             closeEditor();
-            updateStats();
-        }
+            layoutSessions();
+            runTimeLogic();
+        };
 
-        function removeSession() {
-            if (confirm("حذف هذه الحصة؟")) {
-                const db = JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
-                delete db[CORE.targetCell];
-                localStorage.setItem(CORE.dataKey, JSON.stringify(db));
-                document.getElementById(CORE.targetCell).innerHTML = "";
-                closeEditor();
-                updateStats();
-            }
-        }
+        window.removeSession = function () {
+            const state = CORE.editState;
+            if (!state || !state.sessionId) return;
+            if (!confirm("حذف هذه الحصة؟")) return;
 
-        function drawCell(id, s, g, c) {
-            const cell = document.getElementById(id);
-            if(cell) {
-                cell.innerHTML = `<div class="item-card" style="background:${c}">${s} <span>${g}</span></div>`;
-            }
-        }
-
-        function syncData() {
-            const db = JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
-            Object.keys(db).forEach(id => drawCell(id, db[id].s, db[id].g, db[id].c));
-            updateStats();
-        }
-
-        function updateStats() {
-            const db = JSON.parse(localStorage.getItem(CORE.dataKey) || "{}");
-            document.getElementById("sessionCounter").innerText = Object.keys(db).length;
-        }
+            const sessions = getDaySessions(state.dayId).filter(s => s.id !== state.sessionId);
+            saveDaySessions(state.dayId, sessions);
+            closeEditor();
+            layoutSessions();
+            runTimeLogic();
+        };
 
         function setupColors() {
             document.querySelectorAll(".color-circle").forEach(dot => {
@@ -428,8 +762,44 @@
             });
         }
 
+        /* ---------- تحميل الجدول كصورة ---------- */
+        window.downloadSchedule = async function () {
+            const btn = document.getElementById('downloadBtn');
+            const wrapper = document.getElementById('scrollWrapper');
+            btn.classList.add('loading');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            const originalOverflow = wrapper.style.overflow;
+            const originalWidth = wrapper.style.width;
+
+            try {
+                wrapper.style.overflow = 'visible';
+                wrapper.style.width = wrapper.scrollWidth + 'px';
+                layoutSessions();
+                await new Promise(r => setTimeout(r, 80));
+
+                const canvas = await html2canvas(document.querySelector('.table-section'), {
+                    scale: 2,
+                    backgroundColor: '#ffffff',
+                    useCORS: true
+                });
+
+                const link = document.createElement('a');
+                link.download = 'جدول-كناشي-' + Date.now() + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (e) {
+                alert('تعذر تحميل الجدول، حاول مرة أخرى');
+            } finally {
+                wrapper.style.overflow = originalOverflow;
+                wrapper.style.width = originalWidth;
+                layoutSessions();
+                btn.classList.remove('loading');
+                btn.innerHTML = '<i class="fas fa-download"></i>';
+            }
+        };
+
         start();
     </script>
 </body>
 </html>
-
