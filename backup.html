@@ -337,6 +337,65 @@
 const BACKUP_PAGE_URL = "https://theappofkobashi.vercel.app/backup.html";
 
 /* ============================================================
+   الاتصال بقاعدة بيانات IndexedDB (نفس قاعدة بقية صفحات التطبيق)
+   هنا يتخزن التلاميذ والأفواج والمصاريف — وليس في localStorage
+   ============================================================ */
+const IDB_NAME = "kanashi_db";
+const IDB_VERSION = 2;
+const IDB_STORES = ["students", "groups", "expenses"];
+let idb = null;
+
+function openIDB() {
+  return new Promise((resolve) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains("students")) d.createObjectStore("students", { keyPath: "id" });
+      if (!d.objectStoreNames.contains("groups"))   d.createObjectStore("groups",   { keyPath: "id" });
+      if (!d.objectStoreNames.contains("expenses")) d.createObjectStore("expenses", { keyPath: "id" });
+    };
+    req.onsuccess = (e) => { idb = e.target.result; resolve(idb); };
+    req.onerror   = () => resolve(null);
+  });
+}
+
+function idbGetAll(store) {
+  return new Promise((resolve) => {
+    if (!idb) return resolve([]);
+    const tx = idb.transaction(store, "readonly");
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror   = () => resolve([]);
+  });
+}
+
+async function collectIndexedDBData() {
+  const data = {};
+  for (const store of IDB_STORES) {
+    data[store] = await idbGetAll(store);
+  }
+  return data;
+}
+
+function idbClearAndFill(store, items) {
+  return new Promise((resolve) => {
+    if (!idb) return resolve();
+    const tx = idb.transaction(store, "readwrite");
+    tx.objectStore(store).clear();
+    (items || []).forEach(item => tx.objectStore(store).put(item));
+    tx.oncomplete = () => resolve();
+    tx.onerror    = () => resolve();
+  });
+}
+
+async function restoreIndexedDBData(data) {
+  if (!data) return;
+  for (const store of IDB_STORES) {
+    await idbClearAndFill(store, data[store]);
+  }
+}
+
+/* ============================================================
    الخطوة الأولى: تحديد أي وضع نشتغل فيه
    - إذا الرابط فيه #data=  → وضع الاستقبال (تحميل تلقائي)
    - غير هيك               → وضع الإعدادات العادي
@@ -424,11 +483,18 @@ function showToast(msg, isErr){
   setTimeout(() => { t.className = "toast" + (isErr ? " err" : ""); }, 2600);
 }
 
-function refreshStats(){
+async function refreshStats(){
   const itemCountEl = document.getElementById("itemCount");
   const lastBackupEl = document.getElementById("lastBackup");
   if(!itemCountEl || !lastBackupEl) return;
-  itemCountEl.textContent = window.localStorage.length;
+
+  let idbCount = 0;
+  try{
+    const idbData = await collectIndexedDBData();
+    IDB_STORES.forEach(store => idbCount += (idbData[store] || []).length);
+  }catch(e){}
+
+  itemCountEl.textContent = window.localStorage.length + idbCount;
   const saved = window.localStorage.getItem("__lastBackupDate__");
   lastBackupEl.textContent = saved ? saved : "—";
 }
@@ -437,17 +503,23 @@ function toBase64Unicode(str){
   return btoa(unescape(encodeURIComponent(str)));
 }
 
-function downloadBackup(){
-  const obj = {};
+async function downloadBackup(){
+  const localData = {};
   for(let i=0; i<window.localStorage.length; i++){
     const key = window.localStorage.key(i);
-    obj[key] = window.localStorage.getItem(key);
+    localData[key] = window.localStorage.getItem(key);
   }
 
-  if(Object.keys(obj).length === 0){
+  const idbData = await collectIndexedDBData();
+  const idbHasData = IDB_STORES.some(s => (idbData[s] || []).length > 0);
+
+  if(Object.keys(localData).length === 0 && !idbHasData){
     showToast("ما فيه بيانات لحفظها حاليًا", true);
     return;
   }
+
+  // نجمع كل شيء بصيغة موحّدة: localStorage + بيانات IndexedDB (تلاميذ/أفواج/مصاريف)
+  const obj = { __kanashi_backup__: true, localStorage: localData, indexedDB: idbData };
 
   const json = JSON.stringify(obj);
   const encoded = encodeURIComponent(toBase64Unicode(json));
@@ -540,13 +612,25 @@ function resetFileInput(){
 
 function restoreFromFile(file){
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try{
       const data = JSON.parse(e.target.result);
-      window.localStorage.clear();
-      Object.keys(data).forEach(key => {
-        window.localStorage.setItem(key, data[key]);
-      });
+
+      if(data && data.__kanashi_backup__){
+        // ── الصيغة الجديدة: تشمل localStorage + IndexedDB ──
+        window.localStorage.clear();
+        Object.keys(data.localStorage || {}).forEach(key => {
+          window.localStorage.setItem(key, data.localStorage[key]);
+        });
+        await restoreIndexedDBData(data.indexedDB);
+      }else{
+        // ── توافق مع نسخ احتياطية قديمة (localStorage فقط) ──
+        window.localStorage.clear();
+        Object.keys(data).forEach(key => {
+          window.localStorage.setItem(key, data[key]);
+        });
+      }
+
       showToast("تم استرجاع البيانات بنجاح ✅");
       refreshStats();
     }catch(err){
@@ -562,7 +646,7 @@ function restoreFromFile(file){
 }
 
 if(incomingData === null){
-  refreshStats();
+  openIDB().then(refreshStats);
 }
 </script>
 
