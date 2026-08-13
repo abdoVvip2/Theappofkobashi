@@ -262,17 +262,14 @@
     border-radius:var(--radius-sm); font-size:1rem; cursor:pointer;
   }
   .icon-btn-sq.copied{ background:var(--mint-ink); }
-  .gen-btn{
-    width:100%; padding:12px; margin-bottom:16px;
-    background:var(--blue-light); color:var(--blue-dark);
-    border:1.5px dashed var(--blue); border-radius:var(--radius-sm);
-    font-family:'Tajawal', sans-serif; font-weight:800; font-size:0.88rem;
-    cursor:pointer;
+  .sync-timer{
+    text-align:center; font-weight:800; font-size:0.9rem;
+    padding:10px; border-radius:var(--radius-sm);
+    margin-bottom:12px; background:var(--mint); color:var(--mint-ink);
   }
-  .sync-btns{ display:flex; gap:10px; }
-  .sync-btns .main-btn{ font-size:0.92rem; padding:14px; }
+  .sync-timer.expired{ background:var(--pink); color:var(--pink-ink); }
   .main-btn.mint{ background:var(--mint-ink); color:#fff; }
-  .main-btn:disabled{ opacity:0.6; pointer-events:none; }
+  .main-btn:disabled{ opacity:0.55; pointer-events:none; }
   .fa-spin-fast{ animation: spinfast 0.8s linear infinite; }
   @keyframes spinfast{ to{ transform: rotate(360deg); } }
 </style>
@@ -374,28 +371,28 @@
         <div class="section-title">🔗 نقل البيانات بكود بين جهازين</div>
       </div>
       <div class="section-desc">
-        ولّد كود من هذا الجهاز وارفع بياناتك عليه، ثم افتح نفس الصفحة بالجهاز الثاني وأدخل نفس الكود واضغط "سحب" — بدون ما تحتاج ملفات أو روابط.
+        اضغط "إنشاء كود جديد" من هذا الجهاز — بيتولّد كود ويرفع عليه نسخة من بياناتك الحالية تلقائياً. بعدها افتح نفس الصفحة بالجهاز الثاني، اكتب نفس الكود، واضغط "سحب".
       </div>
 
       <div class="code-row">
         <input type="text" id="syncCode" placeholder="مثال: HHWTUYEVMK3T" maxlength="16">
         <button class="icon-btn-sq" id="copyCodeBtn" onclick="copyCode()" title="نسخ الكود"><i class="fas fa-copy"></i></button>
       </div>
-      <button class="gen-btn" onclick="generateCode()"><i class="fas fa-dice"></i> توليد كود جديد</button>
+
+      <div class="sync-timer" id="syncTimer" style="display:none;"></div>
+
+      <button class="main-btn mint" id="createCodeBtn" onclick="createSyncCode()" style="margin-bottom:14px;">
+        <i class="fas fa-plus-circle"></i> إنشاء كود جديد يحتوي بياناتك الحالية
+      </button>
 
       <div class="warning-box" style="margin-bottom:14px;">
         <span class="ic">⚠️</span>
-        <span>"سحب" بيمسح بيانات هذا الجهاز الحالية ويعوّضها بالبيانات المحفوظة تحت الكود.</span>
+        <span>"سحب" بيمسح بيانات هذا الجهاز الحالية ويعوّضها بالبيانات المحفوظة تحت الكود. الكود صالح 10 دقايق فقط وبعدها يتحذف تلقائيًا.</span>
       </div>
 
-      <div class="sync-btns">
-        <button class="main-btn mint" id="syncUploadBtn" onclick="syncUpload()">
-          <i class="fas fa-cloud-arrow-up"></i> رفع
-        </button>
-        <button class="main-btn orange" id="syncDownloadBtn" onclick="syncDownload()">
-          <i class="fas fa-cloud-arrow-down"></i> سحب
-        </button>
-      </div>
+      <button class="main-btn orange" id="syncDownloadBtn" onclick="syncDownload()">
+        <i class="fas fa-cloud-arrow-down"></i> سحب بيانات بهذا الكود
+      </button>
 
       <div class="info-box" id="syncStatus">
         <span class="ic">ℹ️</span>
@@ -730,7 +727,7 @@ if(incomingData === null){
      ============================================================ -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+  import { getDatabase, ref, set, get, child, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
   const firebaseConfig = {
       apiKey: "AIzaSyDGRXACLgFqr7iyyO_S_Ae-XBUWLUpx3Ek",
@@ -745,7 +742,11 @@ if(incomingData === null){
   const syncApp = initializeApp(firebaseConfig, "syncApp");
   const rtdb = getDatabase(syncApp);
   const SYNC_PATH = "device_sync/";
-  const LAST_CODE_KEY = "kanashi_last_sync_code";
+  const LAST_CODE_KEY   = "kanashi_last_sync_code";
+  const CODE_EXPIRES_KEY = "kanashi_sync_code_expires_at";
+  const VALID_MS = 10 * 60 * 1000; // 10 دقايق: مدة صلاحية الكود + فترة التبريد بين كل إنشاء وآخر
+
+  let countdownTimer = null;
 
   function setSyncStatus(text){
     document.getElementById("syncStatus").classList.add("show");
@@ -756,13 +757,12 @@ if(incomingData === null){
     return document.getElementById("syncCode").value.trim().toUpperCase().replace(/\s+/g, "");
   }
 
-  window.generateCode = function(){
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // بدون أحرف/أرقام متشابهة
-    let code = "";
-    for (let i = 0; i < 12; i++) code += chars[Math.floor(Math.random() * chars.length)];
-    document.getElementById("syncCode").value = code;
-    showToast("تم توليد كود جديد");
-  };
+  function fmtMMSS(ms){
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
+  }
 
   window.copyCode = function(){
     const input = document.getElementById("syncCode");
@@ -785,48 +785,100 @@ if(incomingData === null){
     }
   };
 
-  window.syncUpload = async function(){
-    const code = getCleanCode();
-    if(!code){ showToast("اكتب أو ولّد كود أولاً", true); return; }
+  /* ── المؤقّت التنازلي: نفس المدة تمثل صلاحية الكود وفترة التبريد قبل إنشاء كود جديد ── */
+  function startCountdown(code, expiresAt){
+    const timerEl = document.getElementById("syncTimer");
+    const createBtn = document.getElementById("createCodeBtn");
+    timerEl.style.display = "block";
+    timerEl.classList.remove("expired");
 
-    const btn = document.getElementById("syncUploadBtn");
+    clearInterval(countdownTimer);
+
+    function tick(){
+      const remain = expiresAt - Date.now();
+      if(remain <= 0){
+        clearInterval(countdownTimer);
+        timerEl.textContent = "⚠️ انتهت صلاحية هذا الكود وتحذف تلقائيًا — تقدر تنشئ كود جديد الآن";
+        timerEl.classList.add("expired");
+        createBtn.disabled = false;
+        createBtn.innerHTML = '<i class="fas fa-plus-circle"></i> إنشاء كود جديد يحتوي بياناتك الحالية';
+        localStorage.removeItem(CODE_EXPIRES_KEY);
+        return;
+      }
+      timerEl.textContent = `⏳ الكود صالح لمدة: ${fmtMMSS(remain)} — وما تقدر تنشئ كود جديد إلا بعد نفس المدة`;
+      createBtn.disabled = true;
+    }
+    tick();
+    countdownTimer = setInterval(tick, 1000);
+
+    // حذف تلقائي للكود من القاعدة لو الصفحة باقية مفتوحة عند انتهاء الوقت (أفضل جهد)
+    setTimeout(async () => {
+      try{ await remove(ref(rtdb, SYNC_PATH + code)); }catch(e){}
+    }, Math.max(expiresAt - Date.now(), 0));
+  }
+
+  /* ── إنشاء كود جديد + رفع البيانات عليه مباشرة ── */
+  window.createSyncCode = async function(){
+    const now = Date.now();
+    const savedExpires = Number(localStorage.getItem(CODE_EXPIRES_KEY) || 0);
+
+    if(savedExpires > now){
+      showToast("لازم تستنى " + fmtMMSS(savedExpires - now) + " قبل ما تنشئ كود جديد", true);
+      return;
+    }
+
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // بدون أحرف/أرقام متشابهة
+    let code = "";
+    for (let i = 0; i < 12; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    document.getElementById("syncCode").value = code;
+
+    const btn = document.getElementById("createCodeBtn");
     const original = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin-fast"></i> رفع...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin-fast"></i> جاري الإنشاء والرفع...';
 
     try{
-      const localData = {};
+      // نجمع localStorage كمصفوفة {k, v} بدل كائن، لأن أسماء بعض المفاتيح
+      // (مثل مفاتيح Firebase الداخلية firebase:host:...) تحتوي نقاط "."
+      // وقاعدة بيانات Realtime ما تقبلش نقاط بأسماء الخصائص (المفاتيح).
+      const localData = [];
       for(let i=0; i<window.localStorage.length; i++){
         const key = window.localStorage.key(i);
-        localData[key] = window.localStorage.getItem(key);
+        if(!key || key.indexOf("firebase:") === 0) continue;
+        localData.push({ k: key, v: window.localStorage.getItem(key) });
       }
       const idbData = await collectIndexedDBData();
+      const expiresAt = now + VALID_MS;
 
       await set(ref(rtdb, SYNC_PATH + code), {
         localStorage: localData,
         indexedDB: idbData,
-        updatedAt: Date.now()
+        updatedAt: now,
+        expiresAt: expiresAt
       });
 
       localStorage.setItem(LAST_CODE_KEY, code);
+      localStorage.setItem(CODE_EXPIRES_KEY, String(expiresAt));
+
       const sc = (idbData.students || []).length;
       const gc = (idbData.groups || []).length;
-      setSyncStatus(`تم الرفع بنجاح — ${sc} تلميذ، ${gc} فوج. افتح الجهاز الآخر وأدخل نفس الكود ثم اضغط "سحب".`);
-      showToast("تم رفع البيانات بنجاح ✅");
+      setSyncStatus(`تم إنشاء الكود "${code}" وهو يحتوي الآن نسخة من بياناتك الحالية (${sc} تلميذ، ${gc} فوج). شاركه مع جهازك الثاني وادخله هناك قبل ما تنتهي صلاحيته.`);
+      showToast("تم إنشاء الكود ورفع بياناتك عليه ✅");
+      startCountdown(code, expiresAt);
     }catch(e){
-      console.error("Sync upload error:", e);
+      console.error("Sync create error:", e);
       const detail = (e && (e.code || e.message)) ? (e.code || e.message) : String(e);
-      showToast("تعذر الرفع: " + detail, true);
-      setSyncStatus("فشل الرفع — التفاصيل: " + detail + ". إذا كان الخطأ PERMISSION_DENIED فهذا يعني إن قواعد قاعدة البيانات ما تسمحش بالكتابة على مسار device_sync، لازم تُضاف من إعدادات Firebase.");
-    }finally{
+      showToast("تعذر الإنشاء: " + detail, true);
+      setSyncStatus("فشل الإنشاء — التفاصيل: " + detail + ". إذا كان الخطأ PERMISSION_DENIED فهذا يعني إن قواعد قاعدة البيانات ما تسمحش بالكتابة على مسار device_sync، لازم تُضاف من إعدادات Firebase.");
       btn.disabled = false;
       btn.innerHTML = original;
     }
   };
 
+  /* ── سحب بيانات بالكود ── */
   window.syncDownload = async function(){
     const code = getCleanCode();
-    if(!code){ showToast("اكتب الكود اللي رفعت بيه من الجهاز الآخر", true); return; }
+    if(!code){ showToast("اكتب الكود اللي انعطى لك من الجهاز الأول", true); return; }
 
     const sure = confirm("هذا الإجراء بيمسح بيانات هذا الجهاز الحالية ويعوّضها بالبيانات المحفوظة تحت هذا الكود.\n\nمتأكد إنك تبي تكمل؟");
     if(!sure) return;
@@ -839,18 +891,32 @@ if(incomingData === null){
     try{
       const snap = await get(child(ref(rtdb), SYNC_PATH + code));
       if(!snap.exists()){
-        showToast("ما لقيناش بيانات محفوظة تحت هذا الكود", true);
+        showToast("ما لقيناش بيانات محفوظة تحت هذا الكود، تأكد إنه صحيح", true);
         return;
       }
       const data = snap.val();
 
+      // تحقق من انتهاء صلاحية الكود (10 دقايق من وقت الإنشاء)
+      if(data.expiresAt && Date.now() > data.expiresAt){
+        try{ await remove(ref(rtdb, SYNC_PATH + code)); }catch(e){}
+        showToast("انتهت صلاحية هذا الكود، اطلب من الجهاز الأول ينشئ كود جديد", true);
+        setSyncStatus("هذا الكود انتهت صلاحيته وتحذف. الأكواد صالحة لمدة 10 دقايق فقط من وقت إنشائها.");
+        return;
+      }
+
       window.localStorage.clear();
-      Object.keys(data.localStorage || {}).forEach(key => {
-        window.localStorage.setItem(key, data.localStorage[key]);
-      });
+      // ندعم الصيغتين: القديمة (كائن) والجديدة (مصفوفة {k,v}) لأي بيانات سابقة
+      if(Array.isArray(data.localStorage)){
+        data.localStorage.forEach(item => {
+          if(item && typeof item.k === "string") window.localStorage.setItem(item.k, item.v);
+        });
+      }else{
+        Object.keys(data.localStorage || {}).forEach(key => {
+          window.localStorage.setItem(key, data.localStorage[key]);
+        });
+      }
       await restoreIndexedDBData(data.indexedDB);
 
-      localStorage.setItem(LAST_CODE_KEY, code);
       const sc = (data.indexedDB && data.indexedDB.students || []).length;
       const gc = (data.indexedDB && data.indexedDB.groups || []).length;
       setSyncStatus(`تم السحب بنجاح — ${sc} تلميذ، ${gc} فوج. البيانات الآن محدّثة على هذا الجهاز.`);
@@ -867,10 +933,16 @@ if(incomingData === null){
     }
   };
 
-  // تعبئة آخر كود مستعمل عند فتح الصفحة (فقط في الوضع العادي، مو وضع الاستقبال)
+  // عند فتح الصفحة (فقط بالوضع العادي، مو وضع الاستقبال): نرجّع آخر كود ونكمّل المؤقت لو مازال ساري
   if(!document.getElementById("normalMode").classList.contains("hide")){
     const lastCode = localStorage.getItem(LAST_CODE_KEY);
+    const savedExpires = Number(localStorage.getItem(CODE_EXPIRES_KEY) || 0);
     if(lastCode) document.getElementById("syncCode").value = lastCode;
+    if(lastCode && savedExpires > Date.now()){
+      startCountdown(lastCode, savedExpires);
+    }else if(savedExpires && savedExpires <= Date.now()){
+      localStorage.removeItem(CODE_EXPIRES_KEY);
+    }
   }
 </script>
 
