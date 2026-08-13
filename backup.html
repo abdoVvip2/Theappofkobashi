@@ -238,6 +238,43 @@
   .status-badge.ok{ background:var(--mint); color:var(--mint-ink); }
   .status-badge.err{ background:var(--pink); color:var(--pink-ink); }
   .err-title{ color:var(--pink-ink); }
+
+  /* ==== قسم المزامنة عبر كود ==== */
+  .section-card.sync{ border-inline-end-color: var(--mint-ink); }
+  .code-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .code-row input{
+    flex:1; min-width:0; padding:14px;
+    border-radius:var(--radius-sm);
+    border:1.5px solid var(--blue-light);
+    background:var(--blue-pale);
+    color:var(--blue-dark);
+    font-family:'Tajawal', sans-serif;
+    font-size:1.05rem;
+    font-weight:800;
+    letter-spacing:2px;
+    text-align:center;
+    outline:none;
+    text-transform:uppercase;
+  }
+  .code-row input:focus{ border-color:var(--blue); }
+  .icon-btn-sq{
+    flex-shrink:0; width:48px; background:var(--blue); color:#fff; border:none;
+    border-radius:var(--radius-sm); font-size:1rem; cursor:pointer;
+  }
+  .icon-btn-sq.copied{ background:var(--mint-ink); }
+  .gen-btn{
+    width:100%; padding:12px; margin-bottom:16px;
+    background:var(--blue-light); color:var(--blue-dark);
+    border:1.5px dashed var(--blue); border-radius:var(--radius-sm);
+    font-family:'Tajawal', sans-serif; font-weight:800; font-size:0.88rem;
+    cursor:pointer;
+  }
+  .sync-btns{ display:flex; gap:10px; }
+  .sync-btns .main-btn{ font-size:0.92rem; padding:14px; }
+  .main-btn.mint{ background:var(--mint-ink); color:#fff; }
+  .main-btn:disabled{ opacity:0.6; pointer-events:none; }
+  .fa-spin-fast{ animation: spinfast 0.8s linear infinite; }
+  @keyframes spinfast{ to{ transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -263,6 +300,8 @@
         <p>احفظ بياناتك أو رجّعها في أي وقت</p>
       </div>
     </div>
+
+
 
     <div class="stats-card">
       <div class="stats-title">📊 نظرة عامة</div>
@@ -326,6 +365,42 @@
       <button class="main-btn orange" onclick="document.getElementById('fileInput').click()">
         📁 اختيار ملف الاستعادة
       </button>
+    </div>
+
+    <!-- مزامنة عبر كود (بين جهازين) -->
+    <div class="section-card sync">
+      <div class="section-top">
+        <div class="badge done">مزامنة</div>
+        <div class="section-title">🔗 نقل البيانات بكود بين جهازين</div>
+      </div>
+      <div class="section-desc">
+        ولّد كود من هذا الجهاز وارفع بياناتك عليه، ثم افتح نفس الصفحة بالجهاز الثاني وأدخل نفس الكود واضغط "سحب" — بدون ما تحتاج ملفات أو روابط.
+      </div>
+
+      <div class="code-row">
+        <input type="text" id="syncCode" placeholder="مثال: HHWTUYEVMK3T" maxlength="16">
+        <button class="icon-btn-sq" id="copyCodeBtn" onclick="copyCode()" title="نسخ الكود"><i class="fas fa-copy"></i></button>
+      </div>
+      <button class="gen-btn" onclick="generateCode()"><i class="fas fa-dice"></i> توليد كود جديد</button>
+
+      <div class="warning-box" style="margin-bottom:14px;">
+        <span class="ic">⚠️</span>
+        <span>"سحب" بيمسح بيانات هذا الجهاز الحالية ويعوّضها بالبيانات المحفوظة تحت الكود.</span>
+      </div>
+
+      <div class="sync-btns">
+        <button class="main-btn mint" id="syncUploadBtn" onclick="syncUpload()">
+          <i class="fas fa-cloud-arrow-up"></i> رفع
+        </button>
+        <button class="main-btn orange" id="syncDownloadBtn" onclick="syncDownload()">
+          <i class="fas fa-cloud-arrow-down"></i> سحب
+        </button>
+      </div>
+
+      <div class="info-box" id="syncStatus">
+        <span class="ic">ℹ️</span>
+        <span id="syncStatusText"></span>
+      </div>
     </div>
 
   </div>
@@ -648,6 +723,149 @@ function restoreFromFile(file){
 if(incomingData === null){
   openIDB().then(refreshStats);
 }
+</script>
+
+<!-- ============================================================
+     مزامنة عبر كود — تستعمل قاعدة بيانات "tfasilo" (نفس قاعدة كود الاشتراك في index.html)
+     ============================================================ -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+      apiKey: "AIzaSyDGRXACLgFqr7iyyO_S_Ae-XBUWLUpx3Ek",
+      authDomain: "tafasilo-af613.firebaseapp.com",
+      projectId: "tafasilo-af613",
+      databaseURL: "https://tafasilo-af613-default-rtdb.firebaseio.com",
+      storageBucket: "tafasilo-af613.firebasestorage.app",
+      messagingSenderId: "161686251966",
+      appId: "1:161686251966:web:2ee3ccb3bc5163bbb171ef"
+  };
+
+  const syncApp = initializeApp(firebaseConfig, "syncApp");
+  const rtdb = getDatabase(syncApp);
+  const SYNC_PATH = "device_sync/";
+  const LAST_CODE_KEY = "kanashi_last_sync_code";
+
+  function setSyncStatus(text){
+    document.getElementById("syncStatus").classList.add("show");
+    document.getElementById("syncStatusText").textContent = text;
+  }
+
+  function getCleanCode(){
+    return document.getElementById("syncCode").value.trim().toUpperCase().replace(/\s+/g, "");
+  }
+
+  window.generateCode = function(){
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // بدون أحرف/أرقام متشابهة
+    let code = "";
+    for (let i = 0; i < 12; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    document.getElementById("syncCode").value = code;
+    showToast("تم توليد كود جديد");
+  };
+
+  window.copyCode = function(){
+    const input = document.getElementById("syncCode");
+    const code = getCleanCode();
+    if(!code){ showToast("لا يوجد كود لنسخه", true); return; }
+    const btn = document.getElementById("copyCodeBtn");
+    const done = () => {
+      btn.classList.add("copied");
+      showToast("تم نسخ الكود، شاركه مع الجهاز الآخر 📋");
+      setTimeout(() => btn.classList.remove("copied"), 1800);
+    };
+    if(navigator.clipboard && window.isSecureContext){
+      navigator.clipboard.writeText(code).then(done).catch(() => {
+        input.removeAttribute("readonly"); input.select(); input.setSelectionRange(0, 99999);
+        try{ document.execCommand("copy"); done(); }catch(e){ showToast("ما قدرنا ننسخ، حدد الكود يدويًا", true); }
+      });
+    }else{
+      input.select(); input.setSelectionRange(0, 99999);
+      try{ document.execCommand("copy"); done(); }catch(e){ showToast("ما قدرنا ننسخ، حدد الكود يدويًا", true); }
+    }
+  };
+
+  window.syncUpload = async function(){
+    const code = getCleanCode();
+    if(!code){ showToast("اكتب أو ولّد كود أولاً", true); return; }
+
+    const btn = document.getElementById("syncUploadBtn");
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin-fast"></i> رفع...';
+
+    try{
+      const localData = {};
+      for(let i=0; i<window.localStorage.length; i++){
+        const key = window.localStorage.key(i);
+        localData[key] = window.localStorage.getItem(key);
+      }
+      const idbData = await collectIndexedDBData();
+
+      await set(ref(rtdb, SYNC_PATH + code), {
+        localStorage: localData,
+        indexedDB: idbData,
+        updatedAt: Date.now()
+      });
+
+      localStorage.setItem(LAST_CODE_KEY, code);
+      const sc = (idbData.students || []).length;
+      const gc = (idbData.groups || []).length;
+      setSyncStatus(`تم الرفع بنجاح — ${sc} تلميذ، ${gc} فوج. افتح الجهاز الآخر وأدخل نفس الكود ثم اضغط "سحب".`);
+      showToast("تم رفع البيانات بنجاح ✅");
+    }catch(e){
+      showToast("تعذر الرفع، تأكد من الاتصال بالإنترنت", true);
+    }finally{
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  };
+
+  window.syncDownload = async function(){
+    const code = getCleanCode();
+    if(!code){ showToast("اكتب الكود اللي رفعت بيه من الجهاز الآخر", true); return; }
+
+    const sure = confirm("هذا الإجراء بيمسح بيانات هذا الجهاز الحالية ويعوّضها بالبيانات المحفوظة تحت هذا الكود.\n\nمتأكد إنك تبي تكمل؟");
+    if(!sure) return;
+
+    const btn = document.getElementById("syncDownloadBtn");
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin-fast"></i> سحب...';
+
+    try{
+      const snap = await get(child(ref(rtdb), SYNC_PATH + code));
+      if(!snap.exists()){
+        showToast("ما لقيناش بيانات محفوظة تحت هذا الكود", true);
+        return;
+      }
+      const data = snap.val();
+
+      window.localStorage.clear();
+      Object.keys(data.localStorage || {}).forEach(key => {
+        window.localStorage.setItem(key, data.localStorage[key]);
+      });
+      await restoreIndexedDBData(data.indexedDB);
+
+      localStorage.setItem(LAST_CODE_KEY, code);
+      const sc = (data.indexedDB && data.indexedDB.students || []).length;
+      const gc = (data.indexedDB && data.indexedDB.groups || []).length;
+      setSyncStatus(`تم السحب بنجاح — ${sc} تلميذ، ${gc} فوج. البيانات الآن محدّثة على هذا الجهاز.`);
+      showToast("تم استرجاع البيانات بنجاح ✅");
+      refreshStats();
+    }catch(e){
+      showToast("تعذر السحب، تأكد من الاتصال بالإنترنت", true);
+    }finally{
+      btn.disabled = false;
+      btn.innerHTML = original;
+    }
+  };
+
+  // تعبئة آخر كود مستعمل عند فتح الصفحة (فقط في الوضع العادي، مو وضع الاستقبال)
+  if(!document.getElementById("normalMode").classList.contains("hide")){
+    const lastCode = localStorage.getItem(LAST_CODE_KEY);
+    if(lastCode) document.getElementById("syncCode").value = lastCode;
+  }
 </script>
 
 </body>
