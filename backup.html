@@ -814,7 +814,10 @@ if(incomingData === null){
       setSyncStatus(`تم الرفع بنجاح — ${sc} تلميذ، ${gc} فوج. افتح الجهاز الآخر وأدخل نفس الكود ثم اضغط "سحب".`);
       showToast("تم رفع البيانات بنجاح ✅");
     }catch(e){
-      showToast("تعذر الرفع، تأكد من الاتصال بالإنترنت", true);
+      console.error("Sync upload error:", e);
+      const detail = (e && (e.code || e.message)) ? (e.code || e.message) : String(e);
+      showToast("تعذر الرفع: " + detail, true);
+      setSyncStatus("فشل الرفع — التفاصيل: " + detail + ". إذا كان الخطأ PERMISSION_DENIED فهذا يعني إن قواعد قاعدة البيانات ما تسمحش بالكتابة على مسار device_sync، لازم تُضاف من إعدادات Firebase.");
     }finally{
       btn.disabled = false;
       btn.innerHTML = original;
@@ -854,7 +857,10 @@ if(incomingData === null){
       showToast("تم استرجاع البيانات بنجاح ✅");
       refreshStats();
     }catch(e){
-      showToast("تعذر السحب، تأكد من الاتصال بالإنترنت", true);
+      console.error("Sync download error:", e);
+      const detail = (e && (e.code || e.message)) ? (e.code || e.message) : String(e);
+      showToast("تعذر السحب: " + detail, true);
+      setSyncStatus("فشل السحب — التفاصيل: " + detail + ". إذا كان الخطأ PERMISSION_DENIED فهذا يعني إن قواعد قاعدة البيانات ما تسمحش بالقراءة من مسار device_sync، لازم تُضاف من إعدادات Firebase.");
     }finally{
       btn.disabled = false;
       btn.innerHTML = original;
